@@ -33,7 +33,7 @@ class test_models(unittest.TestCase):
     # Данные загружаем через json настройки
     def test_load_createmodel_companymodel(self):
         # Подготовка
-       file_name = "/home/valex/Projects/IGU/Patterns2025/settings.json"
+       file_name = "C:/Users/Alhem/shablons/settings.json"
        manager = settings_manager()
        manager.file_name = file_name
        
@@ -48,7 +48,7 @@ class test_models(unittest.TestCase):
     # Данные загружаем. Проверяем работу Singletone
     def test_loadCombo_createmodel_companymodel(self):
         # Подготовка
-        file_name = "/home/valex/Projects/IGU/Patterns2025/settings.json"
+        file_name = "C:/Users/Alhem/shablons/settings.json"
         manager1 = settings_manager()
         manager1.file_name = file_name
         manager2 = settings_manager()
