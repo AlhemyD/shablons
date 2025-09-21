@@ -43,6 +43,14 @@ class test_models(unittest.TestCase):
        # Проверки
        assert result == True
 
+    #Проверка загрузки файла настроек из любого каталога и с любым названием
+    def test_load_anyfile(self):
+        file_name = "C:/Users/Alhem/shablons/_legacy/hello_company.json"
+        manager = settings_manager()
+        result = manager.load(file_name)
+
+        assert result == True
+
 
     # Проверить создание основной модели
     # Данные загружаем. Проверяем работу Singletone
@@ -59,6 +67,26 @@ class test_models(unittest.TestCase):
 
         # Проверки
         assert manager1.company == manager2.company
+
+    #Проверка на загрузку в Settings.py
+    def test_convert_settings(self):
+        file_name = "C:/Users/Alhem/shablons/settings.json"
+        manager = settings_manager()
+
+        result = manager.convert(file_name)
+
+        assert result == True
+
+        settings = manager.settings
+
+        assert settings.name != ""
+        assert settings.inn != ""
+        assert settings.acc_number != ""
+        assert settings.corr_acc_number != ""
+        assert settings.bic != ""
+        assert settings.ownership != ""
+
+
   
 if __name__ == '__main__':
     unittest.main()   

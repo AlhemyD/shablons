@@ -2,7 +2,7 @@ class company_model:
     __name:str = ""
     __inn:str = ""
 
-    def _init_(self):
+    def __init__(self):
         pass
 
     @property
