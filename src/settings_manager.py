@@ -52,7 +52,7 @@ class settings_manager:
             raise Exception("Не найден файл настроек!")
 
         try:
-            with open(self.__file_name.strip(), 'r') as file_instance:
+            with open(self.__file_name.strip(), 'r', encoding='utf-8') as file_instance:
                 data = json.load(file_instance)
 
                 if "company" in data.keys():
@@ -73,7 +73,7 @@ class settings_manager:
             raise Exception("Не найден файл настроек!")
 
         try:
-            with open(self.file_name.strip(),'r') as file_instance:
+            with open(self.file_name.strip(),'r', encoding='utf-8') as file_instance:
                 data = json.load(file_instance)
                 if "company" in data:
                     item=data["company"]

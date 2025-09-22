@@ -79,12 +79,27 @@ class test_models(unittest.TestCase):
 
         settings = manager.settings
 
-        assert settings.name != ""
-        assert settings.inn != ""
-        assert settings.acc_number != ""
-        assert settings.corr_acc_number != ""
-        assert settings.bic != ""
-        assert settings.ownership != ""
+    #Проверка загрузки всех свойств в Settings.py
+    def test_settings_convert_all(self):
+        file_name="../settings.json"
+        manager=settings_manager()
+
+        result = manager.convert(file_name)
+        settings = manager.settings
+
+        assert settings.name == "Рога и копыта"
+        assert settings.inn == "123456789011"
+        assert settings.acc_number == "12345678901"
+        assert settings.corr_acc_number == "12345678901"
+        assert settings.bic == "123456789"
+        assert settings.ownership == "12345"
+
+    #Проверка загрузки по относительному пути
+    def test_relative_load(self):
+        file_name = "../settings.json"
+        manager = settings_manager()
+        result = manager.load(file_name)
+        assert result == True
 
 
   
