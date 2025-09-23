@@ -43,7 +43,7 @@ class settings_manager:
             self.__file_name = value.strip()
         else:
             if not os.path.isabs(value):
-                value = os.path.join("C:/Users/Alhem/shablons/jsons", value).replace("\\", "/")
+                value = os.path.abspath(value).replace("\\", "/")
                 print(value)
                 if os.path.exists(value):
                     self.__file_name=value.strip()
