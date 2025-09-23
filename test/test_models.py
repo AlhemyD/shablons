@@ -33,7 +33,7 @@ class test_models(unittest.TestCase):
     # Данные загружаем через json настройки
     def test_load_createmodel_companymodel(self):
         # Подготовка
-       file_name = "C:/Users/Alhem/shablons/settings.json"
+       file_name = "/jsons/settings.json"
        manager = settings_manager()
        manager.file_name = file_name
        
@@ -56,7 +56,7 @@ class test_models(unittest.TestCase):
     # Данные загружаем. Проверяем работу Singletone
     def test_loadCombo_createmodel_companymodel(self):
         # Подготовка
-        file_name = "C:/Users/Alhem/shablons/settings.json"
+        file_name = "/jsons/settings.json"
         manager1 = settings_manager()
         manager1.file_name = file_name
         manager2 = settings_manager()
@@ -70,7 +70,7 @@ class test_models(unittest.TestCase):
 
     #Проверка на загрузку в Settings.py
     def test_convert_settings(self):
-        file_name = "C:/Users/Alhem/shablons/settings.json"
+        file_name = "C:/Users/Alhem/shablons/jsons/settings.json"
         manager = settings_manager()
 
         result = manager.convert(file_name)
@@ -81,7 +81,7 @@ class test_models(unittest.TestCase):
 
     #Проверка загрузки всех свойств в Settings.py
     def test_settings_convert_all(self):
-        file_name="../settings.json"
+        file_name= "C:/Users/Alhem/shablons/jsons/settings.json"
         manager=settings_manager()
 
         result = manager.convert(file_name)
@@ -96,7 +96,21 @@ class test_models(unittest.TestCase):
 
     #Проверка загрузки по относительному пути
     def test_relative_load(self):
-        file_name = "../settings.json"
+        file_name = "../jsons/settings.json"
+        manager = settings_manager()
+        result = manager.load(file_name)
+        assert result == True
+
+    #Проверка загрузки по названию файла
+    def test_name_load(self):
+        file_name = "settings.json"
+        manager = settings_manager()
+        result = manager.load(file_name)
+        assert result == True
+
+    #Проверка загрузки из любой директории
+    def test_any_dir_name_load(self):
+        file_name = "../halo.json"
         manager = settings_manager()
         result = manager.load(file_name)
         assert result == True
@@ -104,4 +118,4 @@ class test_models(unittest.TestCase):
 
   
 if __name__ == '__main__':
-    unittest.main()   
+    unittest.main()

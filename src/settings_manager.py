@@ -42,7 +42,14 @@ class settings_manager:
         if os.path.exists(value):
             self.__file_name = value.strip()
         else:
-            raise Exception("Не найден файл настроек!")
+            if not os.path.isabs(value):
+                value = os.path.join("C:/Users/Alhem/shablons/jsons", value).replace("\\", "/")
+                print(value)
+                if os.path.exists(value):
+                    self.__file_name=value.strip()
+                else:
+                    raise Exception("Не найден файл настроек!")
+
 
     # Загрузить настройки из Json файла
     def load(self, filename:str = "") -> bool:
