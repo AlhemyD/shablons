@@ -44,7 +44,6 @@ class settings_manager:
         else:
             if not os.path.isabs(value):
                 value = os.path.abspath(value).replace("\\", "/")
-                print(value)
                 if os.path.exists(value):
                     self.__file_name=value.strip()
                 else:
