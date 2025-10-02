@@ -1,14 +1,20 @@
-from src.models.company_model import company_model
-from src.models.Settings import Settings
+from Src.Models.settings_model import settings_model
+from Src.Core.validator import argument_exception
+from Src.Core.validator import operation_exception
+from Src.Core.validator import validator
+from Src.Models.company_model import company_model
 import os
 import json
+
 ####################################################3
 # Менеджер настроек. 
 # Предназначен для управления настройками и хранения параметров приложения
 class settings_manager:
-    __file_name:str = ""
-    __company:company_model = None
-    __settings:Settings = None
+    # Наименование файла (полный путь)
+    __full_file_name:str = ""
+
+    # Настройки
+    __settings:settings_model = None
 
     # Singletone
     def __new__(cls):
@@ -19,79 +25,67 @@ class settings_manager:
     def __init__(self):
         self.set_default()
 
-    # Параметры организации из настроек
+    # Текущие настройки
     @property
-    def company(self) -> company_model:
-        return self.__company
-
-    #Объект класса Settings.py
-    @property
-    def settings(self) -> Settings:
+    def settings(self) -> settings_model:
         return self.__settings
 
+    # Текущий каталог
     @property
     def file_name(self) -> str:
-        return self.__file_name
+        return self.__full_file_name
 
     # Полный путь к файлу настроек
     @file_name.setter
     def file_name(self, value:str):
-        if value.strip() == "":
-            return
-        
-        if os.path.exists(value):
-            self.__file_name = value.strip()
+        validator.validate(value, str)
+        full_file_name = os.path.abspath(value)        
+        if os.path.exists(full_file_name):
+            self.__full_file_name = full_file_name.strip()
         else:
-            if not os.path.isabs(value):
-                value = os.path.abspath(value).replace("\\", "/")
-                if os.path.exists(value):
-                    self.__file_name=value.strip()
-                else:
-                    raise Exception("Не найден файл настроек!")
-
+            raise argument_exception(f'Не найден файл настроек {full_file_name}')
 
     # Загрузить настройки из Json файла
-    def load(self, filename:str = "") -> bool:
-        if filename:
-            self.file_name = filename
-        if self.__file_name.strip() == "":
-            raise Exception("Не найден файл настроек!")
+    def load(self) -> bool:
+        if self.__full_file_name == "":
+            raise operation_exception("Не найден файл настроек!")
 
         try:
-            with open(self.__file_name.strip(), 'r', encoding='utf-8') as file_instance:
-                data = json.load(file_instance)
+            with open( self.__full_file_name, 'r') as file_instance:
+                settings = json.load(file_instance)
 
-                if "company" in data.keys():
-                    item = data["company"]
-                
-                    self.__company.name = item["name"]
-                    return True
+                if "company" in settings.keys():
+                    data = settings["company"]
+                    return self.convert(data)
 
             return False
         except:
             return False
+        
+    # Обработать полученный словарь    
+    def convert(self, data: dict) -> bool:
+        validator.validate(data, dict)
 
-    #Создать объект класса Settings.py
-    def convert(self, filename:str="") -> bool:
-        if filename:
-            self.file_name = filename
-        if self.__file_name.strip() == "":
-            raise Exception("Не найден файл настроек!")
+        fields = list(filter(lambda x: not x.startswith("_") , dir(self.__settings.company))) 
+        matching_keys = list(filter(lambda key: key in fields, data.keys()))
 
         try:
-            with open(self.file_name.strip(),'r', encoding='utf-8') as file_instance:
-                data = json.load(file_instance)
-                if "company" in data:
-                    item=data["company"]
-                    self.__settings = Settings(item)
-                    return True
-            return False
+            for key in matching_keys:
+                setattr(self.__settings.company, key, data[key])
         except:
-            return False
+            return False        
+
+        return True
+
 
     # Параметры настроек по умолчанию
     def set_default(self):
-        self.__company = company_model()
-        self.__company.name = "Рога и копыта"
+        company = company_model()
+        company.name = "Рога и копыта"
+        company.inn = -1
+        
+        self.__settings = settings_model()
+        self.__settings.company = company
+
 
 
