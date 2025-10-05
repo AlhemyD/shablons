@@ -48,6 +48,7 @@ class company_model(entity_model):
         validator.validate(value, int, 11)
         self.__corr_account = value
 
+    # Счёт
     @property
     def account(self) -> int:
         return self.__account
@@ -57,6 +58,7 @@ class company_model(entity_model):
         validator.validate(value, int, 11)
         self.__account = value
 
+    # Вид собственности
     @property
     def ownership(self) -> str:
         return self.__ownership
