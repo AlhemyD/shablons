@@ -7,19 +7,29 @@ from Src.Models.nomenclature_model import nomenclature_model
 from Src.start_service import start_service
 from Src.reposity import reposity
 from Src.Models.range_model import range_model
-class test_start(unittest.TestCase):
 
+'''
+Тестирование класса start_service
+'''
+
+
+class test_start(unittest.TestCase):
     __start_service: start_service = start_service()
-    def __init__(self, methodName = "runTest"):
+
+    def __init__(self, methodName="runTest"):
         super().__init__(methodName)
         self.__start_service.start()
 
+    # Проверка на создание эталонных данных
     def test_start_service_start_rangeNotEmpty(self):
-        #Подготовка
+        # Подготовка
 
-        #Действие
+        # Действие
 
-        #Проверка
+        # Проверка
         assert len(self.__start_service.data()) > 0
+        assert len(self.__start_service.data()[reposity.group_key()]) > 0
+        assert len(self.__start_service.data()[reposity.nomenclature_key()]) > 0
+        assert len(self.__start_service.data()[reposity.range_key()]) > 0
         assert range_model.create_kill().base.name == range_model.create_gramm().name
-        #assert Киллограмм.БазоваяЕдиница.Код = Грамм.Код
+        assert len(self.__start_service.receipts()) > 0
