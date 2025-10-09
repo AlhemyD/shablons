@@ -31,7 +31,7 @@ class nomenclature_model(entity_model):
         self.__group = value
 
     """
-    Единица измерения
+    Единица измерения на складе
     """
 
     @property

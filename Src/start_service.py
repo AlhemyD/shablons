@@ -3,6 +3,7 @@ from Src.reposity import reposity
 from Src.Models.range_model import range_model
 from Src.Models.nomenclature_model import nomenclature_model
 from Src.Models.group_model import group_model
+from Src.Models.ingredient_model import ingredient_model
 
 '''
 Класс для запуска сервиса
@@ -59,47 +60,97 @@ class start_service:
         another_receipt.cooking_length = range_model(_name="мин", _value=20)
 
         my_receipt.ingredients = [
-            nomenclature_model(
-                _group=group_model(_name="Батон"),
-                _range=range_model(_name="гр", _value=250)
+            ingredient_model(
+                _name="Батон",
+                _range=range_model(_name="гр", _value=250),
+                _nomenclature=nomenclature_model(
+                    _name="Батон",
+                    _group=group_model(_name="Хлеб"),
+                    _range=range_model(_name="шт")
+                )
             ),
-            nomenclature_model(
-                _group=group_model(_name="Сахар"),
-                _range=range_model(_name="гр", _value=25)
+            ingredient_model(
+                _name="Сахар",
+                _range=range_model(_name="гр", _value=25),
+                _nomenclature=nomenclature_model(
+                    _name="Сахар",
+                    _group=group_model(_name="Сыпучее"),
+                    _range=range_model(_name="гр")
+                )
             ),
-            nomenclature_model(
-                _group=group_model(_name="Растительное масло"),
-                _range=range_model(_name="гр", _value=20)
+            ingredient_model(
+                _name="Растительное масло",
+                _range=range_model(_name="гр", _value=20),
+                _nomenclature=nomenclature_model(
+                    _name="Растительное масло",
+                    _group=group_model(_name="Масло(жидкое)"),
+                    _range=range_model(_name="гр")
+                )
             ),
-            nomenclature_model(
-                _group=group_model(_name="Яйца"),
-                _range=range_model(_name="шт", _value=2)
+            ingredient_model(
+                _name="Яйцо",
+                _range=range_model(_name="шт", _value=2),
+                _nomenclature=nomenclature_model(
+                    _name="Яйцо",
+                    _group=group_model(_name="Яйца"),
+                    _range=range_model(_name="шт")
+                )
             ),
-            nomenclature_model(
-                _group=group_model(_name="Молоко"),
-                _range=range_model(_name="гр", _value=28)
+            ingredient_model(
+                _name="Молоко",
+                _range=range_model(_name="гр", _value=28),
+                _nomenclature=nomenclature_model(
+                    _name="Молоко",
+                    _group=group_model(_name="Жидкости"),
+                    _range=range_model(_name="мл")
+                )
             )
         ]
         another_receipt.ingredients = [
-            nomenclature_model(
-                _group=group_model(_name="Пшеничная мука"),
-                _range=range_model(_name="гр", _value=100)
+            ingredient_model(
+                _name="Пшеничная мука",
+                _range=range_model(_name="гр", _value=100),
+                _nomenclature=nomenclature_model(
+                    _name="Пшеничная мука",
+                    _group=group_model(_name="Мука"),
+                    _range=range_model(_name="гр")
+                )
             ),
-            nomenclature_model(
-                _group=group_model(_name="Сахар"),
-                _range=range_model(_name="гр", _value=80)
+            ingredient_model(
+                _name="Сахар",
+                _range=range_model(_name="гр", _value=80),
+                _nomenclature=nomenclature_model(
+                    _name="Сахар",
+                    _group=group_model(_name="Сыпучее"),
+                    _range=range_model(_name="гр")
+                )
             ),
-            nomenclature_model(
-                _group=group_model(_name="Сливочное масло"),
-                _range=range_model(_name="гр", _value=70)
+            ingredient_model(
+                _name="Сливочное масло",
+                _range=range_model(_name="гр", _value=70),
+                _nomenclature=nomenclature_model(
+                    _name="Сливочное масло",
+                    _group=group_model(_name="Масло(твёрдое)"),
+                    _range=range_model(_name="гр")
+                )
             ),
-            nomenclature_model(
-                _group=group_model(_name="Яйца"),
-                _range=range_model(_name="шт", _value=1)
+            ingredient_model(
+                _name="Яйцо",
+                _range=range_model(_name="шт", _value=1),
+                _nomenclature=nomenclature_model(
+                    _name="Яйцо",
+                    _group=group_model(_name="Яйца"),
+                    _range=range_model(_name="шт")
+                )
             ),
-            nomenclature_model(
-                _group=group_model(_name="Ванилин(щепотка)"),
-                _range=range_model(_name="гр", _value=5)
+            ingredient_model(
+                _name="Ванилин",
+                _range=range_model(_name="гр", _value=5),
+                _nomenclature=nomenclature_model(
+                    _name="Ванилин",
+                    _group=group_model(_name="Приправы"),
+                    _range=range_model(_name="гр")
+                )
             )
         ]
 

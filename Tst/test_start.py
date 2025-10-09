@@ -33,3 +33,55 @@ class test_start(unittest.TestCase):
         assert len(self.__start_service.data()[reposity.range_key()]) > 0
         assert range_model.create_kill().base.name == range_model.create_gramm().name
         assert len(self.__start_service.receipts()) > 0
+
+    # Тестирование на уникальность элементов receipts
+    def test_receipt_unique_element(self):
+        # Подготовка
+        receipts = self.__start_service.receipts()
+        unique_receipts = set()
+
+        # Действие
+        for receipt in receipts:
+            unique_receipts.add(receipt.unique_code)
+
+        # Проверки
+        assert len(unique_receipts) == len(receipts)
+
+    # Тестирование на уникальность элементов data[range_model]
+    def test_data_range_unique_element(self):
+        # Подготовка
+        data = self.__start_service.data()
+        unique_elements = set()
+
+        # Действие
+        for datum in data[reposity.range_key()]:
+            unique_elements.add(datum.unique_code)
+
+        # Проверки
+        assert len(unique_elements) == len(data[reposity.range_key()])
+
+    # Тестирование на уникальность элементов data[nomenclature_model]
+    def test_data_nomenclature_unique_element(self):
+        # Подготовка
+        data = self.__start_service.data()
+        unique_elements = set()
+
+        # Действие
+        for datum in data[reposity.nomenclature_key()]:
+            unique_elements.add(datum.unique_code)
+
+        # Проверки
+        assert len(unique_elements) == len(data[reposity.nomenclature_key()])
+
+    # Тестирование на уникальность элементов data[group_model]
+    def test_data_group_unique_element(self):
+        # Подготовка
+        data = self.__start_service.data()
+        unique_elements = set()
+
+        # Действие
+        for datum in data[reposity.group_key()]:
+            unique_elements.add(datum.unique_code)
+
+        # Проверки
+        assert len(unique_elements) == len(data[reposity.group_key()])

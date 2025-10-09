@@ -2,6 +2,7 @@ from Src.Core.entity_model import entity_model
 from Src.Models.range_model import range_model
 from Src.Models.nomenclature_model import nomenclature_model
 from Src.Core.validator import validator, argument_exception
+from Src.Models.ingredient_model import ingredient_model
 
 """
 Модель рецепта
@@ -9,11 +10,11 @@ from Src.Core.validator import validator, argument_exception
 
 class receipt_model(entity_model):
     __number_of_servings: int = 1
-    __ingredients: list[nomenclature_model] = []
+    __ingredients: list[ingredient_model] = []
     __steps: list[str] = []
     __cooking_length: range_model = range_model()
 
-    def __init__(self, _name: str = "", _number_of_servings: int = 1, _ingredients: list[nomenclature_model] = [],
+    def __init__(self, _name: str = "", _number_of_servings: int = 1, _ingredients: list[ingredient_model] = [],
                  _steps: list[str] = [],
                  _cooking_length: range_model = range_model()):
         super().__init__(_name)
