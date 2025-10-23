@@ -1,5 +1,4 @@
 from Src.Core.abstract_model import abstact_model
-from abc import ABC
 from Src.Core.validator import validator
 
 
@@ -19,3 +18,12 @@ class entity_model(abstact_model):
         validator.validate(value, str)
         self.__name = value.strip()
 
+
+    # Фабричный метод
+    @staticmethod
+    def create(name:str):
+        item = entity_model()
+        item.name = name
+        return item
+    
+  
