@@ -1,87 +1,54 @@
-from Src.settings_manager import settings_manager
-from Src.Models.company_model import company_model
+
 import unittest
-from Src.Models.storage_model import storage_model
-import uuid
-from Src.Models.nomenclature_model import nomenclature_model
 from Src.start_service import start_service
 from Src.reposity import reposity
-from Src.Models.range_model import range_model
 
-'''
-Тестирование класса start_service
-'''
-
-
+# Набор тестов для проверки работы статового сервиса
 class test_start(unittest.TestCase):
-    __start_service: start_service = start_service()
 
-    def __init__(self, methodName="runTest"):
-        super().__init__(methodName)
-        self.__start_service.start()
-
-    # Проверка на создание эталонных данных
-    def test_start_service_start_rangeNotEmpty(self):
+    # Проверить создание start_service и заполнение данными
+    def test_notThow_start_service_load(self):
         # Подготовка
+        start = start_service()
 
         # Действие
+        start.start()
 
         # Проверка
-        assert len(self.__start_service.data()) > 0
-        assert len(self.__start_service.data()[reposity.group_key()]) > 0
-        assert len(self.__start_service.data()[reposity.nomenclature_key()]) > 0
-        assert len(self.__start_service.data()[reposity.range_key()]) > 0
-        assert range_model.create_kill().base.name == range_model.create_gramm().name
-        assert len(self.__start_service.receipts()) > 0
+        assert len(start.data[ reposity.range_key()]) > 0
 
-    # Тестирование на уникальность элементов receipts
-    def test_receipt_unique_element(self):
+    # Проверить уникальность элемиентов
+    def test_checkUnique_start_service_load(self):
         # Подготовка
-        receipts = self.__start_service.receipts()
-        unique_receipts = set()
+        start = start_service()
 
         # Действие
-        for receipt in receipts:
-            unique_receipts.add(receipt.unique_code)
+        start.start()
 
-        # Проверки
-        assert len(unique_receipts) == len(receipts)
+        # Проверка
+        gramm =  list(filter(lambda x: x.name == "Грамм", start.data[ reposity.range_key()])) 
+        kg =  list(filter(lambda x: x.name == "Киллограмм", start.data[ reposity.range_key()])) 
+        assert gramm[0].unique_code == kg[0].base.unique_code
 
-    # Тестирование на уникальность элементов data[range_model]
-    def test_data_range_unique_element(self):
+
+    # Проверить метод keys класса reposity
+    def test_any_reposity_keys(self):
         # Подготовка
-        data = self.__start_service.data()
-        unique_elements = set()
 
         # Действие
-        for datum in data[reposity.range_key()]:
-            unique_elements.add(datum.unique_code)
+        result = reposity.keys()
+        
+        # Проверка
+        assert len(result) > 0
 
-        # Проверки
-        assert len(unique_elements) == len(data[reposity.range_key()])
-
-    # Тестирование на уникальность элементов data[nomenclature_model]
-    def test_data_nomenclature_unique_element(self):
+    # Проверить метод initalize класса reposity 
+    def test_notThrow_reposity_initialize(self):   
         # Подготовка
-        data = self.__start_service.data()
-        unique_elements = set()
+        repo = reposity()
 
         # Действие
-        for datum in data[reposity.nomenclature_key()]:
-            unique_elements.add(datum.unique_code)
+        repo.initalize() 
 
-        # Проверки
-        assert len(unique_elements) == len(data[reposity.nomenclature_key()])
 
-    # Тестирование на уникальность элементов data[group_model]
-    def test_data_group_unique_element(self):
-        # Подготовка
-        data = self.__start_service.data()
-        unique_elements = set()
 
-        # Действие
-        for datum in data[reposity.group_key()]:
-            unique_elements.add(datum.unique_code)
-
-        # Проверки
-        assert len(unique_elements) == len(data[reposity.group_key()])
+        

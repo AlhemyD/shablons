@@ -1,191 +1,136 @@
-from Src.Models.receipt_model import receipt_model
+import os
+import json
 from Src.reposity import reposity
 from Src.Models.range_model import range_model
-from Src.Models.nomenclature_model import nomenclature_model
 from Src.Models.group_model import group_model
-from Src.Models.ingredient_model import ingredient_model
-
-'''
-Класс для запуска сервиса
-'''
-
+from Src.Models.nomenclature_model import nomenclature_model
+from Src.Models.receipt_model import receipt_model
+from Src.Models.receipt_item_model import receipt_item_model
+from Src.Dtos.nomenclature_dto import nomenclature_dto
+from Src.Dtos.range_dto import range_dto
+from Src.Dtos.category_dto import category_dto
+from Src.Core.validator import validator, argument_exception, operation_exception
 
 class start_service:
     __repo: reposity = reposity()
+    __default_receipt: receipt_model
+    __cache = {}
+    __full_file_name:str = ""
 
     def __init__(self):
-        self.__repo.data[reposity.range_key()] = []
-        self.__repo.data[reposity.group_key()] = []
-        self.__repo.data[reposity.nomenclature_key()] = []
+        self.__repo.initalize()
 
-    # Singletone
     def __new__(cls):
         if not hasattr(cls, 'instance'):
             cls.instance = super(start_service, cls).__new__(cls)
-        return cls.instance
+        return cls.instance 
 
-    # Метод формирования и сохранения данных по единицам измерения, группам и номенклатурам.
-    def __create(self):
-        self.__default_create_range()
-        self.__default_create_group()
-        self.__default_create_nomenclature()
+    @property
+    def file_name(self) -> str:
+        return self.__full_file_name
 
-    # Создать эталон единиц измерения
-    def __default_create_range(self):
-        self.__repo.append(reposity.range_key(), range_model.create_gramm())
-        self.__repo.append(reposity.range_key(), range_model.create_kill())
+    @file_name.setter
+    def file_name(self, value:str):
+        validator.validate(value, str)
+        full_file_name = os.path.abspath(value)        
+        if os.path.exists(full_file_name):
+            self.__full_file_name = full_file_name.strip()
+        else:
+            raise argument_exception(f'Не найден файл настроек {full_file_name}')
 
-    # Создать эталон групп
-    def __default_create_group(self):
-        self.__repo.append(reposity.group_key(), group_model())
+    def load(self) -> bool:
+        if self.__full_file_name == "":
+            raise operation_exception("Не найден файл настроек!")
 
-    # Создать эталон номенклатур
-    def __default_create_nomenclature(self):
-        self.__repo.append(reposity.nomenclature_key(),
-                           nomenclature_model(_group=group_model(_name="Название группы номенклатуры"),
-                                              _range=range_model.create_gramm()))
+        try:
+            with open(self.__full_file_name, 'r', encoding='utf-8') as file_instance:
+                settings = json.load(file_instance)
 
-    # Создать эталонные рецепты
-    def __create_receipts(self):
-        my_receipt = receipt_model()
-        another_receipt = receipt_model()
+                if "default_receipt" in settings.keys():
+                    data = settings["default_receipt"]
+                    return self.convert(data)
 
-        my_receipt.name = "Гренки с яйцом на сковороде"
-        another_receipt.name = "ВАФЛИ ХРУСТЯЩИЕ В ВАФЕЛЬНИЦЕ"
+            return False
+        except Exception as e:
+            return False
 
-        my_receipt.number_of_servings = 3
-        another_receipt.number_of_servings = 10
+    def __save_item(self, key:str, dto, item):
+        validator.validate(key, str)
+        item.unique_code = dto.id
+        self.__cache.setdefault(dto.id, item)
+        self.__repo.data[key].append(item)
 
-        my_receipt.cooking_length = range_model(_name="ч", _value=1)
-        another_receipt.cooking_length = range_model(_name="мин", _value=20)
+    def __convert_ranges(self, data: dict) -> bool:
+        validator.validate(data, dict)
+        ranges = data.get('ranges', [])
+        if not ranges: return False
+        for range_ in ranges:
+            dto = range_dto().create(range_)
+            item = range_model.from_dto(dto, self.__cache)
+            self.__save_item(reposity.range_key(), dto, item)
+        return True
 
-        my_receipt.ingredients = [
-            ingredient_model(
-                _name="Батон",
-                _range=range_model(_name="гр", _value=250),
-                _nomenclature=nomenclature_model(
-                    _name="Батон",
-                    _group=group_model(_name="Хлеб"),
-                    _range=range_model(_name="шт")
-                )
-            ),
-            ingredient_model(
-                _name="Сахар",
-                _range=range_model(_name="гр", _value=25),
-                _nomenclature=nomenclature_model(
-                    _name="Сахар",
-                    _group=group_model(_name="Сыпучее"),
-                    _range=range_model(_name="гр")
-                )
-            ),
-            ingredient_model(
-                _name="Растительное масло",
-                _range=range_model(_name="гр", _value=20),
-                _nomenclature=nomenclature_model(
-                    _name="Растительное масло",
-                    _group=group_model(_name="Масло(жидкое)"),
-                    _range=range_model(_name="гр")
-                )
-            ),
-            ingredient_model(
-                _name="Яйцо",
-                _range=range_model(_name="шт", _value=2),
-                _nomenclature=nomenclature_model(
-                    _name="Яйцо",
-                    _group=group_model(_name="Яйца"),
-                    _range=range_model(_name="шт")
-                )
-            ),
-            ingredient_model(
-                _name="Молоко",
-                _range=range_model(_name="гр", _value=28),
-                _nomenclature=nomenclature_model(
-                    _name="Молоко",
-                    _group=group_model(_name="Жидкости"),
-                    _range=range_model(_name="мл")
-                )
-            )
-        ]
-        another_receipt.ingredients = [
-            ingredient_model(
-                _name="Пшеничная мука",
-                _range=range_model(_name="гр", _value=100),
-                _nomenclature=nomenclature_model(
-                    _name="Пшеничная мука",
-                    _group=group_model(_name="Мука"),
-                    _range=range_model(_name="гр")
-                )
-            ),
-            ingredient_model(
-                _name="Сахар",
-                _range=range_model(_name="гр", _value=80),
-                _nomenclature=nomenclature_model(
-                    _name="Сахар",
-                    _group=group_model(_name="Сыпучее"),
-                    _range=range_model(_name="гр")
-                )
-            ),
-            ingredient_model(
-                _name="Сливочное масло",
-                _range=range_model(_name="гр", _value=70),
-                _nomenclature=nomenclature_model(
-                    _name="Сливочное масло",
-                    _group=group_model(_name="Масло(твёрдое)"),
-                    _range=range_model(_name="гр")
-                )
-            ),
-            ingredient_model(
-                _name="Яйцо",
-                _range=range_model(_name="шт", _value=1),
-                _nomenclature=nomenclature_model(
-                    _name="Яйцо",
-                    _group=group_model(_name="Яйца"),
-                    _range=range_model(_name="шт")
-                )
-            ),
-            ingredient_model(
-                _name="Ванилин",
-                _range=range_model(_name="гр", _value=5),
-                _nomenclature=nomenclature_model(
-                    _name="Ванилин",
-                    _group=group_model(_name="Приправы"),
-                    _range=range_model(_name="гр")
-                )
-            )
-        ]
+    def __convert_groups(self, data: dict) -> bool:
+        validator.validate(data, dict)
+        categories = data.get('categories', [])
+        if not categories: return False
+        for category in categories:
+            dto = category_dto().create(category)
+            item = group_model.from_dto(dto, self.__cache)
+            self.__save_item(reposity.group_key(), dto, item)
+        return True
 
-        my_receipt.steps = [
-            '''Как пожарить гренки с яйцом на сковороде? Подготовьте необходимые ингредиенты. Хлеб лучше использовать немного подсохший, его проще будет нарезать на тонкие ломтики. Количество сахара можно регулировать по своему вкусу. А для любителей несладких гренок можно сахар совсем исключить и яичную смесь немного подсолить. В таком варианте получатся соленые гренки. В глубокую миску вбейте яйца.''',
-            '''Добавьте немного сахара.''',
-            '''Затем влейте совсем немного, буквально, пару ложек молока. Перемешайте все с помощью венчика или вилки до однородности, чтобы появились небольшие пузырьки. Таким образом, смесь насытится воздухом.''',
-            '''Батон нарежьте на ломтики толщиной 1-2 сантиметра.''',
-            '''Каждый ломтик батона обмакните в яичную смесь с двух сторон.''',
-            '''Сковороду разогрейте до горячего состояния, налейте немного растительного масла и выложите ломтики батона в яичной смеси. Обжаривайте гренки с яйцом и молоком на сковороде с каждой стороны в течение 1-2 минут до аппетитной корочки.''',
-            '''Готовые гренки выкладывайте на бумажную салфетку, чтобы удалить с них лишний жир. Угощайтесь вкусными гренками с чаем или кофе. А детям можно предложить к ним молоко или какао. Приятного аппетита!'''
-        ]
-        another_receipt.steps = [
-            '''Как испечь вафли хрустящие в вафельнице? Подготовьте необходимые продукты. Из данного количества у меня получилось 8 штук диаметром около 10 см.''',
-            '''Масло положите в сотейник с толстым дном. Растопите его на маленьком огне на плите, на водяной бане либо в микроволновке.''',
-            '''Добавьте в теплое масло сахар. Перемешайте венчиком до полного растворения сахара. От тепла сахар довольно быстро растает.''',
-            '''Добавьте в масло яйцо. Предварительно все-таки проверьте масло, не горячее ли оно, иначе яйцо может свариться. Перемешайте яйцо с маслом до однородности.''',
-            '''Всыпьте муку, добавьте ванилин.''',
-            '''Перемешайте массу венчиком до состояния гладкого однородного теста.''',
-            '''Разогрейте вафельницу по инструкции к ней. У меня очень старая, еще советских времен электровафельница. Она может и не очень красивая, но печет замечательно! Я не смазываю вафельницу маслом, в тесте достаточно жира, да и к ней уже давно ничего не прилипает. Но вы смотрите по своей модели. Выкладывайте тесто по столовой ложке. Можно класть немного меньше теста, тогда вафли будут меньше и их получится больше.''',
-            '''Пеките вафли несколько минут до золотистого цвета. Осторожно откройте вафельницу, она очень горячая! Снимите вафлю лопаткой. Горячая она очень мягкая, как блинчик.'''
-        ]
+    def __convert_nomenclatures(self, data: dict) -> bool:
+        validator.validate(data, dict)
+        nomenclatures = data.get('nomenclatures', [])
+        if not nomenclatures: return False
+        for nomenclature in nomenclatures:
+            dto = nomenclature_dto().create(nomenclature)
+            item = nomenclature_model.from_dto(dto, self.__cache)
+            self.__save_item(reposity.nomenclature_key(), dto, item)
+        return True
 
-        self.__repo.receipts.append(my_receipt)
-        self.__repo.receipts.append(another_receipt)
+    def convert(self, data: dict) -> bool:
+        validator.validate(data, dict)
 
-    # Основной метод для генерации эталонных данных
-    def start(self):
-        self.__create()
-        self.__create_receipts()
+        # Рецепт
+        cooking_time = data.get('cooking_time', "")
+        portions = int(data.get('portions', 0))
+        name = data.get('name', "НЕ ИЗВЕСТНО")
+        self.__default_receipt = receipt_model.create(name, cooking_time, portions)
 
-    # Стартовый набор данных
+        steps = data.get('steps', [])
+        for step in steps:
+            if step.strip():
+                self.__default_receipt.steps.append(step)
+
+        self.__convert_ranges(data)
+        self.__convert_groups(data)
+        self.__convert_nomenclatures(data)
+
+        compositions = data.get('composition', [])
+        for composition in compositions:
+            namnomenclature_id = composition.get('nomenclature_id', "")
+            range_id = composition.get('range_id', "")
+            value = composition.get('value', 0)
+            nomenclature = self.__cache.get(namnomenclature_id)
+            range_ = self.__cache.get(range_id)
+            item = receipt_item_model.create(nomenclature, range_, value)
+            self.__default_receipt.composition.append(item)
+
+        self.__repo.data[reposity.receipt_key()].append(self.__default_receipt)
+        return True
+
+    @property
     def data(self):
         return self.__repo.data
 
-    # Стартовый набор рецептов
-    def receipts(self):
-        return self.__repo.receipts
+    def start(self):
+        file_path = os.path.join(os.path.dirname(__file__), "settings.json")
+        if not os.path.exists(file_path):
+            raise operation_exception(f"Файл настроек не найден: {file_path}")
+
+        self.file_name = file_path
+        result = self.load()
+        if not result:
+            raise operation_exception("Невозможно сформировать стартовый набор данных!")

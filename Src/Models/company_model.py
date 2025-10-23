@@ -4,7 +4,6 @@ from Src.Core.entity_model import entity_model
 ###############################################
 # Модель организации
 class company_model(entity_model):
-    __name:str = ""
     __inn:int = 0
     __bic:int = 0
     __corr_account:int = 0
@@ -48,7 +47,6 @@ class company_model(entity_model):
         validator.validate(value, int, 11)
         self.__corr_account = value
 
-    # Счёт
     @property
     def account(self) -> int:
         return self.__account
@@ -58,7 +56,6 @@ class company_model(entity_model):
         validator.validate(value, int, 11)
         self.__account = value
 
-    # Вид собственности
     @property
     def ownership(self) -> str:
         return self.__ownership
