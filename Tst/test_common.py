@@ -1,8 +1,7 @@
 import unittest
 from Src.Core.common import common
-
-# Тут указать любую модель
 from Src.Models.company_model import company_model
+
 
 # Набор тестов для основных методов
 class test_common(unittest.TestCase):

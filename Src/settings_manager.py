@@ -54,7 +54,6 @@ class settings_manager:
 
             return True
         except Exception as ex:
-            print(f"[ERROR] Load settings: {ex}")
             return False
 
     def convert(self, data: dict) -> bool:
@@ -65,7 +64,6 @@ class settings_manager:
             for key in matching_keys:
                 setattr(self.__settings.company, key, data[key])
         except Exception as ex:
-            print(f"[ERROR] Convert: {ex}")
             return False
         return True
 
