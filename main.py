@@ -3,11 +3,29 @@ from flask import request, jsonify
 from Src.start_service import start_service
 from Src.reposity import reposity
 from Src.Logics.factory_entities import factory_entities
+from Src.Convertors.convert_factory import convert_factory
 
 app = connexion.FlaskApp(__name__)
 service = start_service()
 service.start()  
 factory = factory_entities()
+conv_factory = convert_factory()
+
+@app.route("/api/get_receipts", methods=['GET'])
+def get_receipts():
+    receipts = service.data[reposity.receipt_key()]
+    converted_receipts = []
+    for receipt in receipts:
+        converted_receipts.append(conv_factory.convert_object(receipt))
+    return jsonify(converted_receipts)
+
+@app.route("/api/get_receipt/<string:code>", methods=["GET"])
+def get_receipt(code):
+    receipt = next((r for r in service.data[reposity.receipt_key()] if r.unique_code == code), None)
+    if receipt:
+        return jsonify(conv_factory.convert_object(receipt))
+    else:
+        return jsonify({'error':"Receipt not found"}), 404
 
 @app.route("/api/accessibility", methods=['GET'])
 def accessibility():
