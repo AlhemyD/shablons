@@ -1,9 +1,9 @@
-import unittest
 from datetime import datetime
 from Src.Convertors.basic_convertor import basic_converter
 from Src.Convertors.datetime_convertor import datetime_converter
 from Src.Convertors.reference_convertor import reference_converter
 from Src.Core.abstract_model import abstact_model
+import unittest
 
 #Набор тестов для конвертаторов
 class test_convertors(unittest.TestCase):

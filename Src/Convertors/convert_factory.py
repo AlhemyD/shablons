@@ -1,7 +1,7 @@
 from Src.Convertors.basic_convertor import basic_converter
 from Src.Convertors.datetime_convertor import datetime_converter
 from Src.Convertors.reference_convertor import reference_converter
-
+import json
 
 class convert_factory:
     """
@@ -12,7 +12,7 @@ class convert_factory:
         self._converters = [
             basic_converter(),
             datetime_converter(),
-            reference_converter()
+            reference_converter(self)
         ]
 
     def get_converter(self, obj):
@@ -27,3 +27,10 @@ class convert_factory:
     def convert_object(self, obj):
         converter = self.get_converter(obj)
         return converter.convert(obj)
+
+    def serialize_to_json(self, obj):
+        """
+        Метод сериализует объект в JSON с использованием наших конвертеров.
+        """
+        serialized_obj = self.convert_object(obj)
+        return serialized_obj
