@@ -16,4 +16,3 @@ class receipt_item_model(abstact_model):
         item.__value = value
 
 
-    # TODO: Внимание! Тут нужно добавить свойства
