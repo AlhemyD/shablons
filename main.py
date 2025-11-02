@@ -3,6 +3,8 @@ from datetime import datetime
 
 import connexion
 from flask import request, jsonify
+
+from Src.Convertors.structure_convertor import structure_converter
 from Src.start_service import start_service
 from Src.reposity import reposity
 from Src.Logics.factory_entities import factory_entities
@@ -74,6 +76,7 @@ def osv_report():
     if not all([start_date, end_date, storage_id]):
         return jsonify({"error": "Все параметры обязательны: start_date, end_date, storage_id"}), 400
 
+
     transactions = service.data.get(reposity.transaction_key(), [])
     filtered_transactions = [
         t for t in transactions
@@ -88,8 +91,8 @@ def osv_report():
         if key not in report:
             report[key] = {
                 'initial_balance': 0,
-                'product': t.nomenclature.name,
-                'unit': t.unit.name,
+                'product': t.nomenclature,
+                'unit': t.unit,
                 'incoming': 0,
                 'outgoing': 0,
                 'final_balance': 0
@@ -106,7 +109,19 @@ def osv_report():
         v['initial_balance'] = initial_balance
         v['final_balance'] = final_balance
 
-    return jsonify(list(report.values()))
+    # Готовим финальный отчет
+    formatted_report = []
+    for _, v in report.items():
+        formatted_report.append({
+            'nomenclature': v['product'],
+            'unit': v['unit'],
+            'initial_balance': v['initial_balance'],
+            'incoming': v['incoming'],
+            'outgoing': v['outgoing'],
+            'final_balance': v['final_balance']
+        })
+
+    return structure_converter(conv_factory).convert(formatted_report)
 
 
 @app.route("/api/save_data", methods=['POST'])

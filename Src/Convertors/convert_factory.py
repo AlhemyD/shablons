@@ -13,10 +13,11 @@ class convert_factory:
 
     def __init__(self):
         self._converters = [
+            structure_converter(self),
             basic_converter(),
             datetime_converter(),
-            reference_converter(self),
-            structure_converter(self)
+            reference_converter(self)
+
         ]
 
     def get_converter(self, obj):
