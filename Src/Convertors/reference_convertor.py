@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from Src.Core.abstract_model import abstact_model
 from Src.Convertors.abstract_convertor import abstract_converter
 from Src.Core.common import common
@@ -21,7 +23,7 @@ class reference_converter(abstract_converter):
                 continue
 
             attr_value = getattr(obj, attr_name)
-            if isinstance(attr_value, abstact_model):
+            if isinstance(attr_value, abstact_model) or isinstance(attr_value, datetime):
                 # Используем фабрику для конверсии вложенного объекта
                 nested_result = self.__conv_factory.convert_object(attr_value)
                 result[attr_name] = nested_result

@@ -1,5 +1,9 @@
 import os
 import json
+from datetime import datetime
+
+from Src.Models.storage_model import storage_model
+from Src.Models.transaction_model import transaction_model
 from Src.reposity import reposity
 from Src.Models.range_model import range_model
 from Src.Models.group_model import group_model
@@ -11,11 +15,12 @@ from Src.Dtos.range_dto import range_dto
 from Src.Dtos.category_dto import category_dto
 from Src.Core.validator import validator, argument_exception, operation_exception
 
+
 class start_service:
     __repo: reposity = reposity()
     __default_receipt: receipt_model
     __cache = {}
-    __full_file_name:str = ""
+    __full_file_name: str = ""
 
     def __init__(self):
         self.__repo.initalize()
@@ -23,16 +28,16 @@ class start_service:
     def __new__(cls):
         if not hasattr(cls, 'instance'):
             cls.instance = super(start_service, cls).__new__(cls)
-        return cls.instance 
+        return cls.instance
 
     @property
     def file_name(self) -> str:
         return self.__full_file_name
 
     @file_name.setter
-    def file_name(self, value:str):
+    def file_name(self, value: str):
         validator.validate(value, str)
-        full_file_name = os.path.abspath(value)        
+        full_file_name = os.path.abspath(value)
         if os.path.exists(full_file_name):
             self.__full_file_name = full_file_name.strip()
         else:
@@ -44,9 +49,10 @@ class start_service:
 
         try:
             with open(self.__full_file_name, 'r', encoding='utf-8') as file_instance:
+
                 settings = json.load(file_instance)
 
-                if "default_receipt" in settings.keys():
+                if "default_receipt" in settings.keys() and settings.get("first_run"):
                     data = settings["default_receipt"]
                     return self.convert(data)
 
@@ -54,7 +60,7 @@ class start_service:
         except Exception as e:
             return False
 
-    def __save_item(self, key:str, dto, item):
+    def __save_item(self, key: str, dto, item):
         validator.validate(key, str)
         item.unique_code = dto.id
         self.__cache.setdefault(dto.id, item)
@@ -63,7 +69,8 @@ class start_service:
     def __convert_ranges(self, data: dict) -> bool:
         validator.validate(data, dict)
         ranges = data.get('ranges', [])
-        if not ranges: return False
+        if not ranges:
+            return False
         for range_ in ranges:
             dto = range_dto().create(range_)
             item = range_model.from_dto(dto, self.__cache)
@@ -73,7 +80,8 @@ class start_service:
     def __convert_groups(self, data: dict) -> bool:
         validator.validate(data, dict)
         categories = data.get('categories', [])
-        if not categories: return False
+        if not categories:
+            return False
         for category in categories:
             dto = category_dto().create(category)
             item = group_model.from_dto(dto, self.__cache)
@@ -83,7 +91,8 @@ class start_service:
     def __convert_nomenclatures(self, data: dict) -> bool:
         validator.validate(data, dict)
         nomenclatures = data.get('nomenclatures', [])
-        if not nomenclatures: return False
+        if not nomenclatures:
+            return False
         for nomenclature in nomenclatures:
             dto = nomenclature_dto().create(nomenclature)
             item = nomenclature_model.from_dto(dto, self.__cache)
@@ -134,3 +143,48 @@ class start_service:
         result = self.load()
         if not result:
             raise operation_exception("Невозможно сформировать стартовый набор данных!")
+
+        self.initialize_storages_and_transactions()
+
+    def get_initial_balance(self, nomenclature_id, date):
+        """
+        Получает начальный баланс по номенклатуре на указанную дату.
+        """
+        transactions = self.data[reposity.transaction_key()]
+        filtered_transactions = [
+            t for t in transactions
+            if t.date < datetime.strptime(date, '%Y-%m-%d') and t.nomenclature.unique_code == nomenclature_id
+        ]
+
+        balance = sum(t.quantity for t in filtered_transactions)
+        return balance
+
+    def initialize_storages_and_transactions(self):
+        """
+        Добавляет шаблоны склада и транзакции
+        """
+        # Пример добавления данных для складов
+        storage1 = storage_model()
+        storage1.address = "Москва, ул. Тверская, д. 1"
+        storage1.name = "Склад1"
+        storage1.unique_code = "strg1"
+        self.data[reposity.storage_key()].append(storage1)
+
+        # Пример добавления данных для транзакций
+        transaction1 = transaction_model()
+        transaction1.date = datetime.now()
+        transaction1.nomenclature = nomenclature_model()  # Тут нужно задать конкретную номенклатуру
+        transaction1.nomenclature.name = "Номенклатура1"
+        transaction1.storage = storage1
+        transaction1.quantity = 100
+        transaction1.unit = range_model.create("кг", value=1, base=None)
+        self.data[reposity.transaction_key()].append(transaction1)
+
+        transaction2 = transaction_model()
+        transaction2.date = datetime.now()
+        transaction2.nomenclature = nomenclature_model()  # Тут нужно задать конкретную номенклатуру
+        transaction2.nomenclature.name = "Номенклатура2"
+        transaction2.storage = storage1
+        transaction2.quantity = -10
+        transaction2.unit = range_model.create("кг", value=1, base=None)
+        self.data[reposity.transaction_key()].append(transaction2)
