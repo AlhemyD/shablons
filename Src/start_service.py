@@ -170,21 +170,24 @@ class start_service:
         storage1.unique_code = "strg1"
         self.data[reposity.storage_key()].append(storage1)
 
-        # Пример добавления данных для транзакций
         transaction1 = transaction_model()
         transaction1.date = datetime.now()
-        transaction1.nomenclature = nomenclature_model()  # Тут нужно задать конкретную номенклатуру
+        transaction1.nomenclature = nomenclature_model()
         transaction1.nomenclature.name = "Номенклатура1"
+        transaction1.nomenclature.group = group_model().create("Группа Номенклатуры1")
+        transaction1.nomenclature.range = range_model.create_kill()
         transaction1.storage = storage1
         transaction1.quantity = 100
-        transaction1.unit = range_model.create("кг", value=1, base=None)
+        transaction1.unit = range_model.create_kill()
         self.data[reposity.transaction_key()].append(transaction1)
 
         transaction2 = transaction_model()
         transaction2.date = datetime.now()
-        transaction2.nomenclature = nomenclature_model()  # Тут нужно задать конкретную номенклатуру
+        transaction2.nomenclature = nomenclature_model()
         transaction2.nomenclature.name = "Номенклатура2"
+        transaction2.nomenclature.group = group_model().create("Группа Номенклатуры2")
+        transaction2.nomenclature.range = range_model.create_kill()
         transaction2.storage = storage1
         transaction2.quantity = -10
-        transaction2.unit = range_model.create("кг", value=1, base=None)
+        transaction2.unit = range_model.create_kill()
         self.data[reposity.transaction_key()].append(transaction2)
