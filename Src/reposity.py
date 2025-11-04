@@ -32,6 +32,20 @@ class reposity:
     @staticmethod
     def nomenclature_key():
         return "nomenclature_model"
+
+    """
+    Ключ для склада
+    """
+    @staticmethod
+    def storage_key():
+        return "storage_model"
+
+    """
+    Ключ для транзакции
+    """
+    @staticmethod
+    def transaction_key():
+        return "transaction_model"
     
 
     """

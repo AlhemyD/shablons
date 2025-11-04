@@ -3,6 +3,9 @@ from Src.Convertors.datetime_convertor import datetime_converter
 from Src.Convertors.reference_convertor import reference_converter
 import json
 
+from Src.Convertors.structure_convertor import structure_converter
+
+
 class convert_factory:
     """
     Фабрика для выбора подходящего конвертера.
@@ -10,9 +13,11 @@ class convert_factory:
 
     def __init__(self):
         self._converters = [
+            structure_converter(self),
             basic_converter(),
             datetime_converter(),
             reference_converter(self)
+
         ]
 
     def get_converter(self, obj):
