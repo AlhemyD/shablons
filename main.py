@@ -13,7 +13,7 @@ from src.singletons.start_service import StartService
 from src.singletons.settings_manager import SettingsManager
 from pathlib import Path 
 from fastapi import Query 
-from datetime import date
+from datetime import date, datetime
 from typing import List,Dict
 from src.dtos.filter_sorting_dto import filter_sorting_dto
 import json
@@ -21,12 +21,41 @@ import json
 
 settings_file = "data/settings.json"
 start_service = StartService()
+start_service.start(settings_file)
 settings_manager = SettingsManager()
 factory_entities = FactoryEntities()
 factory_converters = FactoryConverters()
 
 app = FastAPI()
 
+@app.post("/api/settings/{new_block_date}/")
+def change_block_date(new_block_date: date):
+    """
+    Изменяет дату блокировки в настройках.
+    """
+    settings_manager.settings.block_period = new_block_date
+    return {"status": "Date updated successfully"}
+
+@app.get("/api/settings/block-date/")
+async def get_current_block_date():
+    """
+    Возвращает текущую дату блокировки.
+    """
+    return {"current_block_date": settings_manager.settings.block_period}
+
+@app.get("/api/balance/{target_date}/")
+async def get_balance_on_date(target_date: str):
+    """
+    Возвращает остатки на указанную дату.
+    """
+    result = OsdTbs.calculate_with_block(
+        storage_id="Главный склад",
+        start=date(1900, 1, 1),
+        end=datetime.strptime(target_date, "%Y-%m-%d").date(),
+        start_service=start_service,
+        settings=settings_manager.settings
+    )
+    return {"balances": result}
 
 @app.get("/api/status")
 def status():
