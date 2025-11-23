@@ -1,17 +1,36 @@
-from Src.Core.abstract_response import abstract_response
-from Src.Core.common import common
+from typing import List, Any
+from src.core.validator import Validator as vld
+from src.core.response_format import ResponseFormat
+from src.core.abstract_response import AbstractResponse
+from src.utils import get_properties, obj_to_str
 
 
-class response_scv(abstract_response):
+"""Класс для формирования ответа в формате CSV"""
+class ResponseCsv(AbstractResponse):
+    # Разделитель CSV
+    delimitter: str = ","
 
-    def build(self, format:str, data: list):
-        text = super().create(format, data)
+    def __init__(self):
+        super().__init__()
+    
+    """Сформировать CSV из списка моделей"""
+    def build(self, data: List[Any]) -> str:
+        text = super().build(data, ResponseFormat.CSV)
 
-        item = data [ 0 ]
-        fields = common.get_fields( item )
-        for field in fields:
-            text += f"{field};"
-
-
-        return text    
-
+        # Шапка
+        item = data[0]
+        properties = get_properties(item)
+        text += self.delimitter.join(properties) + "\n"
+        
+        # Данные
+        rows = list()
+        for item in data:
+            values = list()
+            for prop in properties:
+                value = getattr(item, prop)
+                values += [obj_to_str(value)]
+            
+            rows += [self.delimitter.join(values)]
+        
+        text += "\n".join(rows)
+        return text

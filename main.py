@@ -1,149 +1,206 @@
+import uvicorn
+from fastapi import FastAPI,HTTPException
+from fastapi.responses import HTMLResponse
+from src.core.response_format import ResponseFormat
+from src.core.http_responses import (TextResponse, JsonResponse, ErrorResponse,
+                                     FormatResponse)
+from src.logics.factory_entities import FactoryEntities
+from src.logics.factory_converters import FactoryConverters
+from src.logics.osd_tbs import OsdTbs
+from src.logics.tbs_line import TbsLine
+from src.singletons.repository import Repository
+from src.singletons.start_service import StartService
+from src.singletons.settings_manager import SettingsManager
+from pathlib import Path 
+from fastapi import Query 
+from datetime import date
+from typing import List,Dict
+from src.dtos.filter_sorting_dto import filter_sorting_dto
 import json
-from datetime import datetime
-
-import connexion
-from flask import request, jsonify
-
-from Src.Convertors.structure_convertor import structure_converter
-from Src.start_service import start_service
-from Src.reposity import reposity
-from Src.Logics.factory_entities import factory_entities
-from Src.Convertors.convert_factory import convert_factory
-
-app = connexion.FlaskApp(__name__)
-service = start_service()
-service.start()
-factory = factory_entities()
-conv_factory = convert_factory()
 
 
-@app.route("/api/get_receipts", methods=['GET'])
-def get_receipts():
-    receipts = service.data[reposity.receipt_key()]
-    _factory = convert_factory()
-    converted_receipts = []
-    for receipt in receipts:
-        converted_receipts.append(_factory.serialize_to_json(receipt))
-    return jsonify(converted_receipts)
+settings_file = "data/settings.json"
+start_service = StartService()
+settings_manager = SettingsManager()
+factory_entities = FactoryEntities()
+factory_converters = FactoryConverters()
+
+app = FastAPI()
 
 
-@app.route("/api/get_receipt/<string:code>", methods=["GET"])
-def get_receipt(code):
-    receipt = next((r for r in service.data[reposity.receipt_key()] if r.unique_code == code), None)
-    if receipt:
-        _factory = convert_factory()
-        return _factory.serialize_to_json(receipt)
-    else:
-        return jsonify({'error': "Receipt not found"}), 404
+@app.get("/api/status")
+def status():
+    """Проверить доступность REST API"""
+    return TextResponse("success")
 
 
-@app.route("/api/accessibility", methods=['GET'])
-def accessibility():
-    return "SUCCESS"
+@app.get("/api/responses/formats")
+def get_response_formats():
+    """Доступные форматы ответов"""
+    content = [format.name.lower() for format in ResponseFormat]
+    return JsonResponse(content)
 
 
-@app.route("/api/data/<entity>", methods=['GET'])
-def get_data(entity):
-    fmt = request.args.get('format', 'json').lower()
-    key_map = {
-        "nomenclature": reposity.nomenclature_key(),
-        "range": reposity.range_key(),
-        "receipt": reposity.receipt_key(),
-        "group": reposity.group_key(),
-        "storage": reposity.storage_key(),
-        "transaction": reposity.transaction_key()
-    }
+@app.get("/api/responses/models")
+def get_response_models():
+    """Типы моделей, доступные для формирования ответов"""
+    content = [key for key in Repository.keys()]
+    return JsonResponse(content)
 
-    if entity not in key_map:
-        return jsonify({"error": "Unknown entity"}), 404
 
-    data_list = service.data[key_map[entity]]
+@app.get("/api/responses/build")
+def build_response(format: str, model: str):
+    """
+    Сформировать ответ для моделей в переданном формате:
+    - `format`: строковое обозначение формата ответа
+    - `model`: строковое обозначения типа моделей
+    """
+    formats = [format.name.lower() for format in ResponseFormat]
+    if format is None:
+        return ErrorResponse("param 'format' must be transmitted")
+    format = format.lower()
+    if format not in formats:
+        return ErrorResponse(
+            f"not such format '{format}'. Available: {formats}"
+        )
+    
+    model_types = [key for key in Repository.keys()]
+    if model is None:
+        return ErrorResponse("param 'model' must be transmitted")
+    if model not in model_types:
+        return ErrorResponse(
+            f"not such model '{model}'. Available: {model_types}"
+        )
+
+    models = list(start_service.repository.data[model].values())
+    result = factory_entities.create(format).build(models)
+
+    return FormatResponse(result, format)
+
+
+@app.get("/api/recipes")
+def get_recipes():
+    """Получить список рецептов в формате JSON"""
+    key = Repository.recipes_key
+    recipes = list(start_service.repository.data[key].values())
+    result = factory_converters.convert(recipes)
+
+    return JsonResponse(result)
+
+
+@app.get("/api/recipes/{unique_code}")
+def get_recipe(unique_code: str):
+    """
+    Получить рецепт в формате JSON по его уникальному коду:
+    - `unique_code`: уникальный код рецепта в хранилище
+    """
+    recipe = start_service.repository.get(unique_code=unique_code)
+    result = factory_converters.convert(recipe)
+
+    return JsonResponse(result)
+
+@app.get("/api/storages")
+def get_storages():
+    """Получить список всех ID хранилищ."""
+    try:
+        storage_key = Repository.storages_key
+        storages_data = start_service.repository.data[storage_key]
+        storage_ids = list(storages_data.keys()) #Получаем ключи (ID) из словаря
+        return JsonResponse(storage_ids)
+    except KeyError:
+        raise HTTPException(status_code=500, detail=f"Storage key '{Repository.storages_key}' not found in repository data.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+@app.post("/api/tbs/{storage_id}")
+def get_tbs(start_date: date,end_date: date, storage_id: str, filters: dict = None):
+    """
+    Таблица оборотно-сальдовой ведомости (Trial Balance Sheet, TBS)
+    - `storage_code`: уникальный код склада
+    - `start`: начальная дата отчёта
+    - `end`: дата окончания отчёта
+    """
+    if "filters" not in filters:
+        filters["filters"] = None
+    filters = filter_sorting_dto(filters["filters"])
+    storage = start_service.repository.get(unique_code=storage_id)
+    if storage is None:
+        return ErrorResponse(f"Storage with code '{storage_id}' is null")
+    
+    if start_date >= end_date:
+        return ErrorResponse(f"End date must be later than start date")
+    
+    headers,display_data_rows = OsdTbs.calculate(storage_id, start_date, end_date, start_service,filters)
+
+    # Теперь мы получаем заголовки и данные для отображения здесь, в эндпоинте
+
+    html_table_builder = factory_entities.create(ResponseFormat.HTMLTABLE)
+    final_html = html_table_builder.build(headers=headers, data=display_data_rows) 
+    
+
+    return HTMLResponse(
+        final_html
+    )
+
+
+@app.post("/api/save") # Используем POST, так как это изменение состояния на сервере
+def save_data_to_file(filename: str = Query(...)): # filename как Query параметр
+    """
+    Сохранить все данные репозитория в файл
+    - `filename`: имя выходного файла
+    """
+    if not filename.endswith(".json"):
+        raise HTTPException(status_code=400, detail="Filename must end with .json")
+
+    # Пример безопасного пути: сохранение только в предопределенной директории 'data_exports'
+    safe_path = Path("data_exports") / filename
+    safe_path.parent.mkdir(parents=True, exist_ok=True) # Создать директорию, если ее нет
 
     try:
-        logic = factory.create(fmt)
-        text = logic.build(fmt, data_list)
-        return text, 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        # service_instance вместо start_service
+        # (Убедитесь, что `service_instance = StartService()` определено в начале файла)
+        repository_data = start_service.repository.data
+        # all_keys = list(repository_data.keys())
+    
+        # # Определяем последний ключ
+        # last_key = all_keys[-1]
+        
+        
+        # # Создаем новый словарь, исключая последний ключ
+        # result_data = {key: value for key, value in repository_data.items() if key != last_key}
+        result = factory_converters.convert(repository_data)
+        with open(safe_path, 'w', encoding='utf-8') as file:
+            json.dump(result, file, ensure_ascii=False, indent=4) # indent=4 для красивого форматирования
+        
+        return JsonResponse({"message": f"Data saved successfully to {safe_path}"})
+    
+    except TypeError as te:
+        raise HTTPException(status_code=500, detail=f"Data serialization error: {str(te)}. Ensure all objects in repository.data are JSON-serializable.")
+    except Exception as ex:
+        raise HTTPException(status_code=500, detail=f"Failed to save data: {str(ex)}")
 
 
-@app.route("/api/osv_report", methods=['GET'])
-def osv_report():
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-    storage_id = request.args.get('storage_id')
+@app.get("/api/directories")
+def get_directories():
+    directories = {
+        "measure_unit": factory_converters.convert(start_service.repository.data[Repository.measure_unit_key]),
+        "nomenclatures": factory_converters.convert(start_service.repository.data[Repository.nomenclatures_key]),
+        "nomenclature_groups": factory_converters.convert(start_service.repository.data[Repository.nomenclature_group_key]),
+        "storages": factory_converters.convert(start_service.repository.data[Repository.storages_key]),  # Добавлено
+        "transactions": factory_converters.convert(start_service.repository.data[Repository.transactions_key]),  # Добавлено
+    }
+    return JsonResponse(directories)
+@app.get("/api/transactions")
+def get_transactions():
+    key = Repository.transactions_key
+    transactions = list(start_service.repository.data[key].values())
+    result = [transaction.to_dict() for transaction in transactions]
 
-    if not all([start_date, end_date, storage_id]):
-        return jsonify({"error": "Все параметры обязательны: start_date, end_date, storage_id"}), 400
-
-
-    transactions = service.data.get(reposity.transaction_key(), [])
-    filtered_transactions = [
-        t for t in transactions
-        if t.storage.unique_code == storage_id and
-           start_date <= t.date.strftime('%Y-%m-%d') <= end_date
-    ]
-
-    report = {}
-    for t in filtered_transactions:
-        # Генерируем строковый ключ из уникального кода номенклатуры и единицы измерения
-        key = f"{t.nomenclature.unique_code}-{t.unit.unique_code}"
-        if key not in report:
-            report[key] = {
-                'initial_balance': 0,
-                'product': t.nomenclature,
-                'unit': t.unit,
-                'incoming': 0,
-                'outgoing': 0,
-                'final_balance': 0
-            }
-
-        if t.quantity > 0:
-            report[key]['incoming'] += t.quantity
-        else:
-            report[key]['outgoing'] -= t.quantity
-
-    for k, v in report.items():
-        initial_balance = service.get_initial_balance(k.split('-')[0], start_date)
-        final_balance = initial_balance + v['incoming'] - v['outgoing']
-        v['initial_balance'] = initial_balance
-        v['final_balance'] = final_balance
-
-    # Готовим финальный отчет
-    formatted_report = []
-    for _, v in report.items():
-        formatted_report.append({
-            'nomenclature': v['product'],
-            'unit': v['unit'],
-            'initial_balance': v['initial_balance'],
-            'incoming': v['incoming'],
-            'outgoing': v['outgoing'],
-            'final_balance': v['final_balance']
-        })
-
-    return structure_converter(conv_factory).convert(formatted_report)
+    return JsonResponse(result)
 
 
-@app.route("/api/save_data", methods=['POST'])
-def save_data():
-    filename = "example.json" #request.form.get('filename')
-
-    if not filename:
-        return jsonify({"error": "Название файла должно быть указано"}), 400
-
-    # Получаем все данные из репозитория
-    data = service.data.copy()
-
-    # Преобразовываем все объекты в словарь
-    from Src.Convertors.structure_convertor import structure_converter
-    serialized_data = conv_factory.convert_object(data)
-
-    # Сохраняем в файл
-    with open(filename, 'w') as f:
-        json.dump(serialized_data, f, ensure_ascii=False, indent=2)
-
-    return jsonify({"message": "Данные сохранены успешно"})
-
-
-if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=8080)
+if __name__ == "__main__":
+    settings_manager.load(settings_file)
+    start_service.start(settings_file)
+    uvicorn.run(app=app,
+                host="localhost",
+                port=8081)

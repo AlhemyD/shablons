@@ -1,23 +1,51 @@
-from Src.Core.abstract_response import abstract_response
-from Src.Logics.response_csv import response_scv
-from Src.Logics.response_markdown import response_markdown
-from Src.Logics.response_json import response_json
-from Src.Logics.response_xml import response_xml
-from Src.Core.validator import operation_exception
+from typing import Union
+from src.core.validator import Validator as vld
+from src.core.exceptions import OperationException
+from src.core.response_format import ResponseFormat
+from src.core.abstract_response import AbstractResponse
+from src.logics.response_csv import ResponseCsv
+from src.logics.response_xml import ResponseXml
+from src.logics.response_json import ResponseJson
+from src.logics.response_markdown import ResponseMarkdown
+from src.logics.response_html_table import ResponseHtmlTable
+from src.singletons.settings_manager import SettingsManager
 
-class factory_entities:
-    __match = {
-        "csv": response_scv,
-        "markdown": response_markdown,
-        "json": response_json,
-        "xml": response_xml
+
+"""Класс-фабрика для создания ответов в разных форматах"""
+class FactoryEntities:
+    # Сопоставление текстовых форматов и Enum-форматов
+    match_formats = {
+        "csv": ResponseFormat.CSV,
+        "markdown": ResponseFormat.MARKDOWN,
+        "md": ResponseFormat.MARKDOWN,
+        "json": ResponseFormat.JSON,
+        "xml": ResponseFormat.XML,
+        "xml": ResponseFormat.HTMLTABLE,
     }
 
-    def create(self, format:str) -> abstract_response:
-        format = format.lower()
-        if format not in self.__match:
-            raise operation_exception("Формат не верный")
-        return self.__match[format]()
+    # Сопоставление форматов и классов-ответов
+    match_responses = {
+        ResponseFormat.CSV: ResponseCsv,
+        ResponseFormat.MARKDOWN: ResponseMarkdown,
+        ResponseFormat.JSON: ResponseJson,
+        ResponseFormat.XML: ResponseXml,
+        ResponseFormat.HTMLTABLE: ResponseHtmlTable
+    }
 
-    def create_default(self, settings_format:str) -> abstract_response:
-        return self.create(settings_format)
+    """Метод получения экземпляра ответа"""
+    def create(self, format: Union[str, ResponseFormat]) -> AbstractResponse:
+        vld.validate(format, (str, ResponseFormat), "response format")
+        if isinstance(format, str):
+            format = format.lower().strip()
+            if format not in self.match_formats:
+                raise OperationException(
+                    f"Format '{format}' isn't supported. Available formats: "
+                    f"{self.match_formats.keys()}"
+                )
+            format = self.match_formats[format]
+        
+        return self.match_responses[format]()
+    
+    """Получение экземпляра ответа по умолчанию (из настроек)"""
+    def create_default(self) -> AbstractResponse:
+        return self.create(SettingsManager().settings.response_format)

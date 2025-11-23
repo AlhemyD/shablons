@@ -1,64 +1,82 @@
-from Src.Core.entity_model import entity_model
-from Src.Models.group_model import group_model
-from Src.Models.range_model import range_model
-from Src.Core.validator import validator
-from Src.Dtos.nomenclature_dto import nomenclature_dto
-from Src.reposity import reposity
+from typing import Optional, Self
+from src.core.validator import Validator as vld
+from src.core.abstract_model import AbstractModel
+from src.dtos.nomenclature_dto import NomenclatureDto
+from src.models.measure_unit_model import MeasureUnitModel
+from src.models.nomenclature_group_model import NomenclatureGroupModel
+from src.singletons.repository import Repository
 
 
-"""
-Модель номенклатуры
-"""
-class nomenclature_model(entity_model):
-    __group: group_model = None
-    __range: range_model = None
+"""Модель номенклатуры"""
+class NomenclatureModel(AbstractModel):
+    # Наименование (255)
+    __name: Optional[str] = None
 
-   
-    """
-    Группа номенклатуры
-    """
+    # Группа номенклатуры
+    __group: Optional[NomenclatureGroupModel] = None
+
+    # Единица измерения
+    __measure_unit: Optional[MeasureUnitModel] = None
+
+    def __init__(
+        self,
+        name: Optional[str] = None,
+        group: Optional[NomenclatureGroupModel] = None,
+        unit: Optional[MeasureUnitModel] = None,
+    ):
+        super().__init__()
+        if name is not None:
+            self.name = name
+        if group is not None:
+            self.group = group
+        if unit is not None:
+            self.measure_unit = unit
+
+    """Поле наименования"""
     @property
-    def group(self) -> group_model:
+    def name(self) -> Optional[str]:
+        return self.__name
+    
+    @name.setter
+    def name(self, value: str):
+        vld.is_str(value, "name", len_=255)
+        self.__name = value.strip()
+    
+    """Поле группы номенклатуры"""
+    @property
+    def group(self) -> Optional[NomenclatureGroupModel]:
         return self.__group
-
+    
     @group.setter
-    def group(self, value: group_model):
-        validator.validate(value,entity_model )
-        self.__group = value    
-
-    """
-    Единица измерения
-    """
+    def group(self, value: Optional[NomenclatureGroupModel]):
+        vld.validate(value, NomenclatureGroupModel, "group", True)
+        self.__group = value
+    
+    """Поле, хранящее объект единицы измерения"""
     @property
-    def range(self) -> range_model:
-        return self.__range
+    def measure_unit(self) -> Optional[MeasureUnitModel]:
+        return self.__measure_unit
     
-    @range.setter
-    def range(self, value: range_model):
-        validator.validate(value, range_model)
-        self.__range = value
-
-
-    """
-    Универсальный фабричный метод
-    """
-    def create(name:str, group:group_model, range:range_model):
-        validator.validate(name, str)
-        item = nomenclature_model()
-        item.name = name
-        item.group = group
-        item.range = range
-        return item
+    @measure_unit.setter
+    def measure_unit(self, value: Optional[MeasureUnitModel]):
+        vld.validate(value, MeasureUnitModel, "measure_unit", True)
+        self.__measure_unit = value
     
-    """
-    Фабричный метод из Dto
-    """
-    def from_dto(dto:nomenclature_dto, cache:dict):
-        validator.validate(dto, nomenclature_dto)
-        validator.validate(cache, dict)
-        range =  cache[ dto.range_id ] if dto.range_id in cache else None
-        category =  cache[ dto.category_id] if dto.category_id in cache else None
-        item  = nomenclature_model.create(dto.name, category, range)
-        return item
-        
+    """Универсальный фабричный метод"""
+    @staticmethod
+    def create(
+        name: Optional[str] = None,
+        group: Optional[NomenclatureGroupModel] = None,
+        unit: Optional[MeasureUnitModel] = None,
+    ) -> Self:
+        return NomenclatureModel(name, group, unit)
     
+    """Фабричный метод из DTO"""
+    def from_dto(dto: NomenclatureDto, repo: Repository) -> Self:
+        group = repo.get_by_name(dto.group)
+        unit = repo.get_by_name(dto.measure_unit)
+        return NomenclatureModel(
+            name=dto.name,
+            group=group,
+            unit=unit,
+        )
