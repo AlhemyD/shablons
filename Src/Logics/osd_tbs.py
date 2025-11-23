@@ -27,7 +27,7 @@ class OsdTbs:
             settings: SettingsModel
     ) -> List[TbsLine]:
         # Сначала используем предыдущие расчеты до даты блокировки
-        #previous_turnovers = settings.turnover_until_block
+        previous_turnovers = settings.turnover_until_block
 
         # Затем добавляем новые обороты начиная с даты блокировки
         block_period = settings.block_period
@@ -37,6 +37,10 @@ class OsdTbs:
         result = []
         seen_codes = set()
 
+        # Предварительно собранные обороты
+        for entry in previous_turnovers:
+            result.append(entry)
+            seen_codes.add(entry.get('unique_code'))  # Используем get для защиты от отсутствия ключа
 
         # Новый расчет добавляется, только если запись новая
         for entry in current_turnovers:
@@ -46,6 +50,28 @@ class OsdTbs:
                 seen_codes.add(unique_code)
 
         return result
+
+    @staticmethod
+    def calculate_until_block(
+            storage_id: str,
+            block_period: date,
+            start_service: StartService
+    ) -> List[TbsLine]:
+        """
+        Рассчитывает обороты до даты блокировки включительно.
+
+        :param storage_id: Уникальный идентификатор склада
+        :param block_period: Дата блокировки
+        :param start_service: Экземпляр стартового сервиса
+        :return: Список строк TbsLine до даты блокировки
+        """
+        # Период с самого начала учета до даты блокировки
+        start = datetime(1900, 1, 1)
+        end = datetime(block_period.year, block_period.month, block_period.day, 23, 59, 59)
+
+        # Получаем нужные транзакции и выполняем стандартный расчёт
+        headers, display_data_rows = OsdTbs.calculate(storage_id, start, end, start_service)
+        return display_data_rows
 
 
     @staticmethod

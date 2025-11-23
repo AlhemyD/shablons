@@ -26,7 +26,7 @@ class SettingsManager:
         self.default()
         self.__settings.block_period = block_period
         # Добавляем расчет оборотов до даты блокировки
-        #self.update_turnovers_until_block()
+        self.update_turnovers_until_block()
 
     def __new__(cls):
         if cls.__instance is None:
