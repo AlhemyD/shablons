@@ -40,7 +40,7 @@ class OsdTbs:
         # Предварительно собранные обороты
         for entry in previous_turnovers:
             result.append(entry)
-            seen_codes.add(entry.get('unique_code'))  # Используем get для защиты от отсутствия ключа
+            seen_codes.add(entry.get('unique_code'))
 
         # Новый расчет добавляется, только если запись новая
         for entry in current_turnovers:
