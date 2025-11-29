@@ -1,12 +1,17 @@
 import json
+from datetime import date, datetime
+
 from src.core.validator import Validator as vld
 from src.models.settings_model import SettingsModel
-
+from src.logics.osd_tbs import OsdTbs
+from src.singletons.start_service import StartService
 
 """Менеджер настроек
 
 Предназначен для управления настройками и хранения параметров приложения.
 """
+
+
 class SettingsManager:
     # Ссылка на экземпляр SettingsManager
     __instance = None
@@ -17,15 +22,28 @@ class SettingsManager:
     # Инкупсулирумый объект настроек
     __settings: SettingsModel
 
-    def __init__(self):
+    def __init__(self, block_period=datetime.now()):
         self.default()
+        self.__settings.block_period = block_period
+        # Добавляем расчет оборотов до даты блокировки
+        self.update_turnovers_until_block()
 
     def __new__(cls):
         if cls.__instance is None:
             cls.__instance = super().__new__(cls)
         return cls.__instance
 
+    def update_turnovers_until_block(self):
+        start_service = StartService()
+        turnovers = OsdTbs.calculate_until_block(
+            storage_id="Главный склад",
+            block_period=self.settings.block_period,
+            start_service=start_service
+        )
+        self.settings.turnover_until_block = turnovers
+
     """Абсолютный путь к файлу с настройками"""
+
     @property
     def file_name(self) -> str:
         return self.__file_name
@@ -33,8 +51,9 @@ class SettingsManager:
     @file_name.setter
     def file_name(self, value: str):
         self.__file_name = vld.is_file_exists(value)
-    
+
     """Настройки с хранящейся моделью компании"""
+
     @property
     def settings(self) -> SettingsModel:
         return self.__settings
@@ -43,8 +62,9 @@ class SettingsManager:
     def settings(self, value: SettingsModel):
         vld.validate(value, SettingsModel, "settings")
         self.__settings = value
-    
+
     """Метод загрузки файла настроек"""
+
     def load(self, file_name: str) -> bool:
         self.file_name = file_name
         try:
@@ -60,8 +80,9 @@ class SettingsManager:
                 return True
         except Exception as e:
             return False
-    
+
     """Метод извлечения данных компании из загуженного файла настроек"""
+
     def convert_company_data(self, data: dict) -> bool:
         vld.is_dict(data, "data")
 
@@ -82,8 +103,9 @@ class SettingsManager:
             return True
         except:
             return False
-    
+
     """Метод загрузки формата ответов по умолчанию из файла настроек"""
+
     def convert_response_format(self, data: str) -> bool:
         from src.logics.factory_entities import FactoryEntities
         try:
@@ -92,8 +114,9 @@ class SettingsManager:
             return True
         except KeyError:
             return False
-    
+
     """Метод инициализации стандартных значений полей"""
+
     def default(self):
         self.settings = SettingsModel()
         self.settings.company.name = "Default Name"
