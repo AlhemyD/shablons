@@ -1,4 +1,6 @@
 from abc import ABC
+from typing import Dict
+
 from src.core.exceptions import OperationException as operation_exception
 from src.core.event_type import event_type
 
@@ -9,6 +11,15 @@ from src.core.event_type import event_type
 
 class abstract_logic(ABC):
     __error_text: str = ""
+    __params:Dict = {}
+
+    @property
+    def params(self):
+        return self.__params
+
+    @params.setter
+    def params(self, value):
+        self.__params = value
 
     """
     Описание ошибки
@@ -48,3 +59,4 @@ class abstract_logic(ABC):
         events = event_type.events()
         if event not in events:
             raise operation_exception(f"{events} - не является событием!")
+        self.__params = params

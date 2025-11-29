@@ -1,12 +1,15 @@
 import uvicorn
 from fastapi import FastAPI,HTTPException
 from fastapi.responses import HTMLResponse
+
+from src.core.abstract_model import AbstractModel
 from src.core.response_format import ResponseFormat
 from src.core.http_responses import (TextResponse, JsonResponse, ErrorResponse,
                                      FormatResponse)
 from src.logics.factory_entities import FactoryEntities
 from src.logics.factory_converters import FactoryConverters
 from src.logics.osd_tbs import OsdTbs
+from src.logics.reference_service import ReferenceService
 from src.logics.tbs_line import TbsLine
 from src.singletons.repository import Repository
 from src.singletons.start_service import StartService
@@ -22,11 +25,31 @@ import json
 settings_file = "data/settings.json"
 start_service = StartService()
 start_service.start(settings_file)
-settings_manager = SettingsManager()
+settings_manager = start_service.settings_manager
 factory_entities = FactoryEntities()
 factory_converters = FactoryConverters()
+observe_service = start_service.observe_service
+reference_service = ReferenceService(start_service)
+
 
 app = FastAPI()
+
+@app.get("/api/{reference_type}/{unique_code}")
+def get_reference(reference_type: str, unique_code: str):
+    return reference_service.search_reference(reference_type, unique_code)
+
+@app.put("/api/{reference_type}")
+def put_reference(reference_type: str, model: AbstractModel):
+    return reference_service.add_reference(reference_type, model)
+
+@app.patch("/api/{reference_type}/{unique_code}")
+def patch_reference(reference_type: str, unique_code: str, model: AbstractModel):
+    return reference_service.edit_reference(reference_type, unique_code, model)
+
+@app.delete("/api/{reference_type}/{unique_code}")
+def delete_reference(reference_type: str, unique_code: str):
+    return reference_service.remove_reference(reference_type, unique_code)
+
 
 @app.post("/api/settings/{new_block_date}/")
 def change_block_date(new_block_date: date):
