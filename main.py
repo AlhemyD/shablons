@@ -10,14 +10,11 @@ from src.logics.factory_entities import FactoryEntities
 from src.logics.factory_converters import FactoryConverters
 from src.logics.osd_tbs import OsdTbs
 from src.logics.reference_service import ReferenceService
-from src.logics.tbs_line import TbsLine
 from src.singletons.repository import Repository
 from src.singletons.start_service import StartService
-from src.singletons.settings_manager import SettingsManager
 from pathlib import Path 
 from fastapi import Query 
 from datetime import date, datetime
-from typing import List,Dict
 from src.dtos.filter_sorting_dto import filter_sorting_dto
 import json
 

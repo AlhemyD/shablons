@@ -8,6 +8,9 @@ from src.dtos.measure_unit_dto import MeasureUnitDto
 from src.dtos.nomenclature_dto import NomenclatureDto
 from src.dtos.nomenclature_group_dto import NomenclatureGroupDto
 from src.dtos.recipe_dto import RecipeDto
+from src.handlers.deletion_validator import DeletionValidator
+from src.handlers.edit_handler import EditHandler
+from src.handlers.settings_changed_handler import SettingsChangedHandler
 from src.logics.reference_service import ReferenceService
 from src.models.recipe_model import RecipeModel
 from src.models.measure_unit_model import MeasureUnitModel
@@ -20,7 +23,7 @@ from src.models.storage_model import StorageModel
 from src.singletons.repository import Repository
 from src.singletons.settings_manager import SettingsManager
 
-"""Класс, наполняющий приложение эталлоными объектами разных типов"""
+"""Класс, наполняющий приложение эталонными объектами разных типов"""
 class StartService:
     # Ссылка на экземпляр StartService
     __instance = None
@@ -48,6 +51,9 @@ class StartService:
     def __init__(self):
         self.__repository.initalize()
         self.__observe_service = observe_service(self)
+        self.__observe_service.add(DeletionValidator(self))
+        self.__observe_service.add(SettingsChangedHandler(self))
+        self.__observe_service.add(EditHandler(self))
 
     def __new__(cls):
         if cls.__instance is None:
@@ -174,7 +180,7 @@ class StartService:
     def __convert_nomenlatures(self, data: dict) -> bool:
         return self.__convert_models(
             data=data,
-            data_key="nomenlatures",
+            data_key="nomenclatures",
             repo_key=Repository.nomenclatures_key,
             dto_type=NomenclatureDto,
             model_type=NomenclatureModel
@@ -219,7 +225,7 @@ class StartService:
         self.__convert_storages(data) 
         self.__convert_transactions(data)
 
-        self.__reference_service = ReferenceService(self.__repository)
+        self.__reference_service = ReferenceService(self)
     
     """Метод вызова методов генерации эталонных данных"""
     def start(self, file_name: str):

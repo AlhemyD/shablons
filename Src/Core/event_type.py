@@ -4,6 +4,12 @@
 
 
 class event_type:
+    ADDED_REFERENCE = "ADDED_REFERENCE"
+    EDITED_REFERENCE = "EDITED_REFERENCE"
+    REMOVED_REFERENCE = "REMOVED_REFERENCE"
+    UPDATED_SETTINGS = "UPDATED_SETTINGS"
+    INTENT_TO_REMOVE_REFERENCE = "INTENT_TO_REMOVE_REFERENCE"
+
     """
     Событие - смена даты блокировки
     """
@@ -32,5 +38,9 @@ class event_type:
         for method in methods:
             key = getattr(event_type, method)()
             result.append(key)
-
+        result.append(event_type.ADDED_REFERENCE)
+        result.append(event_type.REMOVED_REFERENCE)
+        result.append(event_type.INTENT_TO_REMOVE_REFERENCE)
+        result.append(event_type.EDITED_REFERENCE)
+        result.append(event_type.UPDATED_SETTINGS)
         return result
