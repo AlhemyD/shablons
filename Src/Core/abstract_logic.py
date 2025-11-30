@@ -1,6 +1,9 @@
 from abc import ABC
+from typing import Dict
+
 from src.core.exceptions import OperationException as operation_exception
 from src.core.event_type import event_type
+from src.singletons.start_service import StartService
 
 """
 Абстрактный класс для обработки логики
@@ -9,6 +12,9 @@ from src.core.event_type import event_type
 
 class abstract_logic(ABC):
     __error_text: str = ""
+
+    def __init__(self, start_service: StartService):
+        self.start_service = start_service
 
     """
     Описание ошибки
@@ -44,7 +50,7 @@ class abstract_logic(ABC):
     Обработка события
     """
 
-    def handle(self, event: str, params):
+    def handle(self, event: str, params: dict):
         events = event_type.events()
         if event not in events:
             raise operation_exception(f"{events} - не является событием!")

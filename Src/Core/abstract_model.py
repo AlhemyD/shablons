@@ -48,5 +48,5 @@ class AbstractModel(ABC):
             return self.unique_code == other.unique_code
         else:
             raise WrongTypeException(
-                f"Imposible compare with '{type(other)}'"
+                f"Impossible compare with '{type(other)}'"
             )
