@@ -7,7 +7,6 @@ from src.models.storage_model import StorageModel
 from src.models.transaction_model import TransactionModel
 from src.models.nomenclature_model import NomenclatureModel
 from src.singletons.repository import Repository
-from src.singletons.start_service import StartService
 from src.logics.prototype_report import PrototypeReport
 from src.dtos.filter_dto import FiltredDto
 from src.dtos.filter_sorting_dto import filter_sorting_dto
@@ -17,13 +16,12 @@ from src.core.filter_operators import filter_operators
 
 
 class OsdTbs:
-
     @staticmethod
     def calculate_with_block(
             storage_id: str,
             start: date,
             end: date,
-            start_service: StartService,
+            start_service,
             settings: SettingsModel
     ) -> List[TbsLine]:
         # Сначала используем предыдущие расчеты до даты блокировки
@@ -55,7 +53,7 @@ class OsdTbs:
     def calculate_until_block(
             storage_id: str,
             block_period: date,
-            start_service: StartService
+            start_service
     ) -> List[TbsLine]:
         """
         Рассчитывает обороты до даты блокировки включительно.
@@ -79,7 +77,7 @@ class OsdTbs:
             storage_id: str,
             start: date,
             end: date,
-            start_service: StartService,
+            start_service,
             filters: filter_sorting_dto = None,
 
     ) -> List[TbsLine]:
@@ -113,11 +111,11 @@ class OsdTbs:
                 line.add(transaction, start, end)
 
         tbs_keys = data.keys()
-        all_keys = StartService().data[Repository.nomenclatures_key].keys()
+        all_keys = start_service.data[Repository.nomenclatures_key].keys()
         other_keys = set(all_keys) - set(tbs_keys)
 
         for key in other_keys:
-            nomenclature = StartService().repository.get(unique_code=key)
+            nomenclature = start_service.repository.get(unique_code=key)
             if nomenclature is None:
                 continue
             data[key] = TbsLine(TransactionModel(

@@ -1,10 +1,10 @@
 import json
 from datetime import date, datetime
 
+from src.core.event_type import event_type
 from src.core.validator import Validator as vld
 from src.models.settings_model import SettingsModel
 from src.logics.osd_tbs import OsdTbs
-from src.singletons.start_service import StartService
 
 """Менеджер настроек
 
@@ -22,19 +22,25 @@ class SettingsManager:
     # Инкупсулирумый объект настроек
     __settings: SettingsModel
 
-    def __init__(self, block_period=datetime.now()):
+    __start_service = None
+
+    def __init__(self,start_service=None, block_period=datetime.now()):
+        self.__start_service = start_service
         self.default()
         self.__settings.block_period = block_period
         # Добавляем расчет оборотов до даты блокировки
         self.update_turnovers_until_block()
 
-    def __new__(cls):
-        if cls.__instance is None:
-            cls.__instance = super().__new__(cls)
-        return cls.__instance
+    @property
+    def start_service(self):
+        return self.__start_service
+
+    @start_service.setter
+    def start_service(self, value):
+        self.__start_service = value
 
     def update_turnovers_until_block(self):
-        start_service = StartService()
+        start_service = self.start_service
         turnovers = OsdTbs.calculate_until_block(
             storage_id="Главный склад",
             block_period=self.settings.block_period,
@@ -50,6 +56,7 @@ class SettingsManager:
 
     @file_name.setter
     def file_name(self, value: str):
+        self.start_service.observe_service.create_event(event_type.INFO_EVENT, {"settings_filename":value})
         self.__file_name = vld.is_file_exists(value)
 
     """Настройки с хранящейся моделью компании"""
@@ -76,9 +83,10 @@ class SettingsManager:
                 # Проверяем, нужно ли загружать данные при первом старте
                 if settings.get("first_start", False):
                     pass
-
+                self.start_service.observe_service.create_event(event_type.INFO_EVENT, {"settings_loaded": True})
                 return True
         except Exception as e:
+            self.start_service.observe_service.create_event(event_type.ERROR_EVENT, {"settings_loaded": False})
             return False
 
     """Метод извлечения данных компании из загуженного файла настроек"""

@@ -1,5 +1,4 @@
 from src.core.abstract_logic import abstract_logic
-from src.singletons.start_service import StartService
 
 """
 Реализация наблюдателя
@@ -9,7 +8,7 @@ from src.singletons.start_service import StartService
 class observe_service:
     handlers = []
 
-    def __init__(self, start_service: StartService):
+    def __init__(self, start_service):
         self.start_service = start_service
 
     """
