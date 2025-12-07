@@ -1,7 +1,7 @@
 {
     "logging": {
         "min_level": "DEBUG",
-        "output": "logs/app.log"
+        "output": "data/log.txt"
     },
     "company": {
         "name": "Danny MAD Entertainment",

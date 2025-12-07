@@ -45,7 +45,7 @@ class StartService:
     __observe_service: observe_service = None
 
     # output для логирования
-    __output = "logs/app.log"
+    __output = "data/log.txt"
 
     # min_log_level для логирования
 
