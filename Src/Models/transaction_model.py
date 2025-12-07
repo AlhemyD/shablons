@@ -30,6 +30,30 @@ class TransactionModel(AbstractModel):
     # Имя транзакции
     __name: Optional[str] = None
 
+    @property
+    def nomenclature(self):
+        return self.__nomenclature
+
+    @nomenclature.setter
+    def nomenclature(self, value):
+        self.__nomenclature = value
+
+    @property
+    def storage(self):
+        return self.__storage
+
+    @storage.setter
+    def storage(self, value):
+        self.__storage = value
+
+    @property
+    def measure_unit(self):
+        return self.__measure_unit
+
+    @measure_unit.setter
+    def measure_unit(self, value):
+        self.__measure_unit = value
+
     def __init__(self, 
                  date: Optional[datetime] = None,
                  unique_number: Optional[str] = None,

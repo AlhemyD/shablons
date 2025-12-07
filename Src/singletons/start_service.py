@@ -1,11 +1,17 @@
 import json
 from typing import Optional, Dict
+
+from src.core.observe_service import observe_service
 from src.core.validator import Validator as vld
 from src.core.exceptions import OperationException
 from src.dtos.measure_unit_dto import MeasureUnitDto
 from src.dtos.nomenclature_dto import NomenclatureDto
 from src.dtos.nomenclature_group_dto import NomenclatureGroupDto
 from src.dtos.recipe_dto import RecipeDto
+from src.handlers.deletion_validator import DeletionValidator
+from src.handlers.edit_handler import EditHandler
+from src.handlers.settings_changed_handler import SettingsChangedHandler
+from src.logics.reference_service import ReferenceService
 from src.models.recipe_model import RecipeModel
 from src.models.measure_unit_model import MeasureUnitModel
 from src.models.nomenclature_model import NomenclatureModel
@@ -15,9 +21,9 @@ from src.dtos.transaction_dto import TransactionDto
 from src.dtos.storage_dto import StorageDto
 from src.models.storage_model import StorageModel
 from src.singletons.repository import Repository
+from src.singletons.settings_manager import SettingsManager
 
-
-"""Класс, наполняющий приложение эталлоными объектами разных типов"""
+"""Класс, наполняющий приложение эталонными объектами разных типов"""
 class StartService:
     # Ссылка на экземпляр StartService
     __instance = None
@@ -28,13 +34,39 @@ class StartService:
     # Ссылка на объект Repository
     __repository: Optional[Repository] = Repository()
 
+    # reference_service
+    __reference_service: ReferenceService = None
+
+    # observe_service
+    __observe_service: observe_service = None
+
+    # settings_manager
+
+    __settings_manager: SettingsManager = SettingsManager()
+
+    @property
+    def settings_manager(self):
+        return self.__settings_manager
+
     def __init__(self):
         self.__repository.initalize()
+        self.__observe_service = observe_service(self)
+        self.__observe_service.add(DeletionValidator(self))
+        self.__observe_service.add(SettingsChangedHandler(self))
+        self.__observe_service.add(EditHandler(self))
 
     def __new__(cls):
         if cls.__instance is None:
             cls.__instance = super().__new__(cls)
         return cls.__instance
+
+    @property
+    def observe_service(self):
+        return self.__observe_service
+
+    @property
+    def reference_service(self):
+        return self.__reference_service
 
     """Поле пути до файла с загружаемыми объектами"""
     @property
@@ -148,7 +180,7 @@ class StartService:
     def __convert_nomenlatures(self, data: dict) -> bool:
         return self.__convert_models(
             data=data,
-            data_key="nomenlatures",
+            data_key="nomenclatures",
             repo_key=Repository.nomenclatures_key,
             dto_type=NomenclatureDto,
             model_type=NomenclatureModel
@@ -163,7 +195,7 @@ class StartService:
             dto_type=RecipeDto,
             model_type=RecipeModel
         )
-        """Метод конвертации объекта в модели транзакций"""
+    """Метод конвертации объекта в модели транзакций"""
     def __convert_transactions(self, data: dict) -> bool:
         return self.__convert_models(
             data=data,
@@ -183,7 +215,7 @@ class StartService:
             model_type=StorageModel 
         )
     """Метод конвертации объекта в модели"""
-    def convert(self, data: dict) -> bool:
+    def convert(self, data: dict):
         vld.is_dict(data, "data")
         self.__convert_nomenclature_groups(data)
         self.__convert_measure_units(data)
@@ -191,7 +223,9 @@ class StartService:
         self.__convert_recipes(data)
         
         self.__convert_storages(data) 
-        self.__convert_transactions(data)  
+        self.__convert_transactions(data)
+
+        self.__reference_service = ReferenceService(self)
     
     """Метод вызова методов генерации эталонных данных"""
     def start(self, file_name: str):

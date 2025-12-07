@@ -1,4 +1,5 @@
 from src.core.abstract_logic import abstract_logic
+from src.singletons.start_service import StartService
 
 """
 Реализация наблюдателя
@@ -7,6 +8,9 @@ from src.core.abstract_logic import abstract_logic
 
 class observe_service:
     handlers = []
+
+    def __init__(self, start_service: StartService):
+        self.start_service = start_service
 
     """
     Добавить объект под наблюдение
@@ -17,21 +21,17 @@ class observe_service:
         if instance is None:
             return
         if not isinstance(instance, abstract_logic):
-            return
+            raise AttributeError("instance should be abstract_logic")
 
         if instance not in observe_service.handlers:
             observe_service.handlers.append(instance)
-
-    """
-    Удадлить из под наблюдения
-    """
 
     @staticmethod
     def delete(instance):
         if instance is None:
             return
         if not isinstance(instance, abstract_logic):
-            return
+            raise AttributeError("instance should be abstract_logic")
 
         if instance in observe_service.handlers:
             observe_service.handlers.remove(instance)
