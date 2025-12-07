@@ -10,6 +10,10 @@ class event_type:
     UPDATED_SETTINGS = "UPDATED_SETTINGS"
     INTENT_TO_REMOVE_REFERENCE = "INTENT_TO_REMOVE_REFERENCE"
 
+    DEBUG_EVENT = "DEBUG_EVENT"
+    INFO_EVENT = "INFO_EVENT"
+    ERROR_EVENT = "ERROR_EVENT"
+
     """
     Событие - смена даты блокировки
     """
@@ -43,4 +47,7 @@ class event_type:
         result.append(event_type.INTENT_TO_REMOVE_REFERENCE)
         result.append(event_type.EDITED_REFERENCE)
         result.append(event_type.UPDATED_SETTINGS)
+        result.append(event_type.DEBUG_EVENT)
+        result.append(event_type.INFO_EVENT)
+        result.append(event_type.ERROR_EVENT)
         return result

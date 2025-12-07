@@ -3,7 +3,6 @@ from typing import Dict
 
 from src.core.exceptions import OperationException as operation_exception
 from src.core.event_type import event_type
-from src.singletons.start_service import StartService
 
 """
 Абстрактный класс для обработки логики
@@ -13,7 +12,7 @@ from src.singletons.start_service import StartService
 class abstract_logic(ABC):
     __error_text: str = ""
 
-    def __init__(self, start_service: StartService):
+    def __init__(self, start_service):
         self.start_service = start_service
 
     """

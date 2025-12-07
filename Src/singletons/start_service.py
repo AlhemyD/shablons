@@ -1,6 +1,7 @@
 import json
 from typing import Optional, Dict
 
+from src.core.log_level import LogLevel
 from src.core.observe_service import observe_service
 from src.core.validator import Validator as vld
 from src.core.exceptions import OperationException
@@ -10,6 +11,7 @@ from src.dtos.nomenclature_group_dto import NomenclatureGroupDto
 from src.dtos.recipe_dto import RecipeDto
 from src.handlers.deletion_validator import DeletionValidator
 from src.handlers.edit_handler import EditHandler
+from src.handlers.logging_observer import LoggingObserver
 from src.handlers.settings_changed_handler import SettingsChangedHandler
 from src.logics.reference_service import ReferenceService
 from src.models.recipe_model import RecipeModel
@@ -24,6 +26,8 @@ from src.singletons.repository import Repository
 from src.singletons.settings_manager import SettingsManager
 
 """Класс, наполняющий приложение эталонными объектами разных типов"""
+
+
 class StartService:
     # Ссылка на экземпляр StartService
     __instance = None
@@ -40,13 +44,28 @@ class StartService:
     # observe_service
     __observe_service: observe_service = None
 
-    # settings_manager
+    # output для логирования
+    __output = "logs/app.log"
 
-    __settings_manager: SettingsManager = SettingsManager()
+    # min_log_level для логирования
+
+    __min_log_level = LogLevel.DEBUG
+
+    # logger
+
+    __logger = None
 
     @property
-    def settings_manager(self):
-        return self.__settings_manager
+    def logger(self):
+        return self.__logger
+
+    @property
+    def output(self):
+        return self.__output
+
+    @property
+    def min_log_level(self):
+        return self.__min_log_level
 
     def __init__(self):
         self.__repository.initalize()
@@ -54,6 +73,8 @@ class StartService:
         self.__observe_service.add(DeletionValidator(self))
         self.__observe_service.add(SettingsChangedHandler(self))
         self.__observe_service.add(EditHandler(self))
+        self.__logger = LoggingObserver(min_level=self.__min_log_level, output=self.__output, start_service=self)
+        self.__observe_service.add(self.__logger)
 
     def __new__(cls):
         if cls.__instance is None:
@@ -69,46 +90,55 @@ class StartService:
         return self.__reference_service
 
     """Поле пути до файла с загружаемыми объектами"""
+
     @property
     def file_name(self) -> str:
         return self.__file_name
-    
+
     @file_name.setter
     def file_name(self, value: str):
         self.__file_name = vld.is_file_exists(value)
 
     """Словарь данных репозитория"""
+
     @property
     def data(self) -> dict:
         return self.__repository.data
-    
+
     """Объект репозитория"""
+
     @property
     def repository(self) -> Repository:
         return self.__repository
 
     """Группы номенклатур в репозитории"""
+
     @property
     def nomenclature_groups(self) -> Dict[str, NomenclatureGroupModel]:
         return self.data[Repository.nomenclature_group_key]
-    
+
     """Единицы измерения в репозитории"""
+
     @property
     def measure_units(self) -> Dict[str, MeasureUnitModel]:
         return self.data[Repository.measure_unit_key]
-    
+
     """Номенклатуры в репозитории"""
+
     @property
     def nomenclatures(self) -> Dict[str, NomenclatureModel]:
         return self.data[Repository.nomenclatures_key]
+
     @property
     def storages(self) -> Dict[str, StorageModel]:
         return self.data[Repository.storages_key]
+
     @property
     def transactions(self) -> Dict[str, TransactionModel]:
         return self.data[Repository.transactions_key]
 
     """Метод загрузки эталонных моделей и рецептов из файла настроек"""
+
     def load(self) -> bool:
         if not self.file_name:
             raise OperationException(
@@ -117,8 +147,10 @@ class StartService:
         with open(self.file_name, mode='r', encoding="utf-8") as file:
             objects = json.load(file)
             data = objects["models"]
+            self.__min_log_level = objects["logging"]["min_level"]
+            self.__output = objects["logging"]["output"]
             return self.convert(data)
-    
+
     """Универсальный метод чтения и записи моделей из файла с помощью DTO
     
     Args:
@@ -129,13 +161,14 @@ class StartService:
         dto_type (type): класс, унаследованный от AbstractDto
         model_type (type): класс, унаследованный от AbstractModel
     """
+
     def __convert_models(
-        self,
-        data: dict,
-        data_key: str,
-        repo_key: str,
-        dto_type: type,
-        model_type: type,
+            self,
+            data: dict,
+            data_key: str,
+            repo_key: str,
+            dto_type: type,
+            model_type: type,
     ) -> bool:
         vld.is_dict(data, "data")
         vld.is_str(data_key, "data_key")
@@ -144,19 +177,20 @@ class StartService:
         items = data.get(data_key, [])
         if not items:
             return False
-        
+
         for item in items:
             # Если объект с таким же именем уже существует, то пропускаем
             if self.__repository.get_by_name(item.get("name", "")):
                 continue
-            
+
             dto = dto_type().load(item)
             model = model_type.from_dto(dto, self.__repository)
             self.__repository.data[repo_key][model.name] = model
 
         return True
-    
+
     """Метод конвертации объекта в модели групп номенклатур"""
+
     def __convert_nomenclature_groups(self, data: dict) -> bool:
         return self.__convert_models(
             data=data,
@@ -165,8 +199,9 @@ class StartService:
             dto_type=NomenclatureGroupDto,
             model_type=NomenclatureGroupModel
         )
-    
+
     """Метод конвертации объекта в модели единиц измерения"""
+
     def __convert_measure_units(self, data: dict) -> bool:
         return self.__convert_models(
             data=data,
@@ -175,8 +210,9 @@ class StartService:
             dto_type=MeasureUnitDto,
             model_type=MeasureUnitModel
         )
-    
+
     """Метод конвертации объекта в модели номенклатур"""
+
     def __convert_nomenlatures(self, data: dict) -> bool:
         return self.__convert_models(
             data=data,
@@ -187,6 +223,7 @@ class StartService:
         )
 
     """Метод конвертации объекта в модели рецептов"""
+
     def __convert_recipes(self, data: dict) -> bool:
         return self.__convert_models(
             data=data,
@@ -195,39 +232,45 @@ class StartService:
             dto_type=RecipeDto,
             model_type=RecipeModel
         )
+
     """Метод конвертации объекта в модели транзакций"""
+
     def __convert_transactions(self, data: dict) -> bool:
         return self.__convert_models(
             data=data,
             data_key="transactions",
-            repo_key=Repository.transactions_key, 
-            dto_type=TransactionDto, 
-            model_type=TransactionModel  
+            repo_key=Repository.transactions_key,
+            dto_type=TransactionDto,
+            model_type=TransactionModel
         )
-    
+
     """Метод конвертации объекта в модели складов"""
+
     def __convert_storages(self, data: dict) -> bool:
         return self.__convert_models(
             data=data,
             data_key="storages",
             repo_key=Repository.storages_key,
             dto_type=StorageDto,
-            model_type=StorageModel 
+            model_type=StorageModel
         )
+
     """Метод конвертации объекта в модели"""
+
     def convert(self, data: dict):
         vld.is_dict(data, "data")
         self.__convert_nomenclature_groups(data)
         self.__convert_measure_units(data)
         self.__convert_nomenlatures(data)
         self.__convert_recipes(data)
-        
-        self.__convert_storages(data) 
+
+        self.__convert_storages(data)
         self.__convert_transactions(data)
 
         self.__reference_service = ReferenceService(self)
-    
+
     """Метод вызова методов генерации эталонных данных"""
+
     def start(self, file_name: str):
         self.file_name = file_name
         self.load()

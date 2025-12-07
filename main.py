@@ -1,8 +1,9 @@
 import uvicorn
-from fastapi import FastAPI,HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 
 from src.core.abstract_model import AbstractModel
+from src.core.event_type import event_type
 from src.core.response_format import ResponseFormat
 from src.core.http_responses import (TextResponse, JsonResponse, ErrorResponse,
                                      FormatResponse)
@@ -11,40 +12,61 @@ from src.logics.factory_converters import FactoryConverters
 from src.logics.osd_tbs import OsdTbs
 from src.logics.reference_service import ReferenceService
 from src.singletons.repository import Repository
+from src.singletons.settings_manager import SettingsManager
 from src.singletons.start_service import StartService
-from pathlib import Path 
-from fastapi import Query 
+from pathlib import Path
+from fastapi import Query
 from datetime import date, datetime
 from src.dtos.filter_sorting_dto import filter_sorting_dto
 import json
 
-
 settings_file = "data/settings.json"
 start_service = StartService()
 start_service.start(settings_file)
-settings_manager = start_service.settings_manager
 factory_entities = FactoryEntities()
 factory_converters = FactoryConverters()
 observe_service = start_service.observe_service
 reference_service = ReferenceService(start_service)
-
+settings_manager = SettingsManager(start_service=start_service, block_period=datetime.now())
 
 app = FastAPI()
 
+
 @app.get("/api/{reference_type}/{unique_code}")
 def get_reference(reference_type: str, unique_code: str):
+    start_service.observe_service.create_event(event_type.INFO_EVENT, {"function": "get_reference", "request": "/api/",
+                                                                       "reference_type": reference_type,
+                                                                       "unique_code": unique_code})
     return reference_service.search_reference(reference_type, unique_code)
 
+
 @app.put("/api/{reference_type}")
-def put_reference(reference_type: str, model: AbstractModel):
+def put_reference(reference_type: str, model):
+    start_service.observe_service.create_event(event_type.INFO_EVENT, {"function": "put_reference", "request": "/api/",
+                                                                       "reference_type": reference_type,
+                                                                       "model_unique_code": model.unique_code})
+
     return reference_service.add_reference(reference_type, model)
 
+
 @app.patch("/api/{reference_type}/{unique_code}")
-def patch_reference(reference_type: str, unique_code: str, model: AbstractModel):
+def patch_reference(reference_type: str, unique_code: str, model):
+    start_service.observe_service.create_event(event_type.INFO_EVENT,
+                                               {"function": "patch_reference", "request": "/api/",
+                                                "reference_type": reference_type,
+                                                "unique_code": unique_code,
+                                                "model_unique_code": model.unique_code})
+
     return reference_service.edit_reference(reference_type, unique_code, model)
+
 
 @app.delete("/api/{reference_type}/{unique_code}")
 def delete_reference(reference_type: str, unique_code: str):
+    start_service.observe_service.create_event(event_type.INFO_EVENT,
+                                               {"function": "delete_reference", "request": "/api/",
+                                                "reference_type": reference_type,
+                                                "unique_code": unique_code})
+
     return reference_service.remove_reference(reference_type, unique_code)
 
 
@@ -54,14 +76,23 @@ def change_block_date(new_block_date: date):
     Изменяет дату блокировки в настройках.
     """
     settings_manager.settings.block_period = new_block_date
+    start_service.observe_service.create_event(event_type.INFO_EVENT,
+                                               {"function": "change_block_date", "request": "/api/settings",
+                                                "new_block_date": date})
+
     return {"status": "Date updated successfully"}
+
 
 @app.get("/api/settings/block-date/")
 async def get_current_block_date():
     """
     Возвращает текущую дату блокировки.
     """
+    start_service.observe_service.create_event(event_type.INFO_EVENT, {"function": "get_current_block_date",
+                                                                       "request": "/api/settings/block-date"})
+
     return {"current_block_date": settings_manager.settings.block_period}
+
 
 @app.get("/api/balance/{target_date}/")
 async def get_balance_on_date(target_date: str):
@@ -75,11 +106,18 @@ async def get_balance_on_date(target_date: str):
         start_service=start_service,
         settings=settings_manager.settings
     )
+    start_service.observe_service.create_event(event_type.INFO_EVENT,
+                                               {"function": "get_balance_on_date", "request": "/api/balance",
+                                                "target_date": target_date})
+
     return {"balances": result}
+
 
 @app.get("/api/status")
 def status():
     """Проверить доступность REST API"""
+    start_service.observe_service.create_event(event_type.INFO_EVENT,
+                                               {"function": "status", "request": "/api/status"})
     return TextResponse("success")
 
 
@@ -87,6 +125,9 @@ def status():
 def get_response_formats():
     """Доступные форматы ответов"""
     content = [format.name.lower() for format in ResponseFormat]
+    start_service.observe_service.create_event(event_type.INFO_EVENT,
+                                               {"function": "get_response_formats",
+                                                "request": "/api/responses/formats"})
     return JsonResponse(content)
 
 
@@ -94,6 +135,8 @@ def get_response_formats():
 def get_response_models():
     """Типы моделей, доступные для формирования ответов"""
     content = [key for key in Repository.keys()]
+    start_service.observe_service.create_event(event_type.INFO_EVENT,
+                                               {"function": "get_response_models", "request": "/api/responses/models"})
     return JsonResponse(content)
 
 
@@ -106,24 +149,39 @@ def build_response(format: str, model: str):
     """
     formats = [format.name.lower() for format in ResponseFormat]
     if format is None:
+        start_service.observe_service.create_event(event_type.ERROR_EVENT,
+                                                   {"function": "build_response", "request": "/api/responses/build",
+                                                    "format": format, "model": model})
+
         return ErrorResponse("param 'format' must be transmitted")
     format = format.lower()
     if format not in formats:
+        start_service.observe_service.create_event(event_type.ERROR_EVENT,
+                                                   {"function": "build_response", "request": "/api/responses/build",
+                                                    "format": format, "model": model})
         return ErrorResponse(
             f"not such format '{format}'. Available: {formats}"
         )
-    
+
     model_types = [key for key in Repository.keys()]
     if model is None:
+        start_service.observe_service.create_event(event_type.ERROR_EVENT,
+                                                   {"function": "build_response", "request": "/api/responses/build",
+                                                    "format": format, "model": model})
         return ErrorResponse("param 'model' must be transmitted")
     if model not in model_types:
+        start_service.observe_service.create_event(event_type.ERROR_EVENT,
+                                                   {"function": "build_response", "request": "/api/responses/build",
+                                                    "format": format, "model": model})
         return ErrorResponse(
             f"not such model '{model}'. Available: {model_types}"
         )
 
     models = list(start_service.repository.data[model].values())
     result = factory_entities.create(format).build(models)
-
+    start_service.observe_service.create_event(event_type.INFO_EVENT,
+                                               {"function": "build_response", "request": "/api/responses/build",
+                                                "format": format, "model": model})
     return FormatResponse(result, format)
 
 
@@ -133,6 +191,8 @@ def get_recipes():
     key = Repository.recipes_key
     recipes = list(start_service.repository.data[key].values())
     result = factory_converters.convert(recipes)
+    start_service.observe_service.create_event(event_type.INFO_EVENT,
+                                               {"function": "get_recipes", "request": "/api/recipes"})
 
     return JsonResponse(result)
 
@@ -145,8 +205,12 @@ def get_recipe(unique_code: str):
     """
     recipe = start_service.repository.get(unique_code=unique_code)
     result = factory_converters.convert(recipe)
+    start_service.observe_service.create_event(event_type.INFO_EVENT,
+                                               {"function": "get_recipe", "request": "/api/recipes",
+                                                "unique_code": unique_code})
 
     return JsonResponse(result)
+
 
 @app.get("/api/storages")
 def get_storages():
@@ -154,14 +218,23 @@ def get_storages():
     try:
         storage_key = Repository.storages_key
         storages_data = start_service.repository.data[storage_key]
-        storage_ids = list(storages_data.keys()) #Получаем ключи (ID) из словаря
+        storage_ids = list(storages_data.keys())  # Получаем ключи (ID) из словаря
+        start_service.observe_service.create_event(event_type.INFO_EVENT,
+                                                   {"function": "get_storages", "request": "/api/storages"})
         return JsonResponse(storage_ids)
     except KeyError:
-        raise HTTPException(status_code=500, detail=f"Storage key '{Repository.storages_key}' not found in repository data.")
+        start_service.observe_service.create_event(event_type.ERROR_EVENT,
+                                                   {"function": "get_storages", "request": "/api/storages"})
+        raise HTTPException(status_code=500,
+                            detail=f"Storage key '{Repository.storages_key}' not found in repository data.")
     except Exception as e:
+        start_service.observe_service.create_event(event_type.ERROR_EVENT,
+                                                   {"function": "get_storages", "request": "/api/storages"})
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+
 @app.post("/api/tbs/{storage_id}")
-def get_tbs(start_date: date,end_date: date, storage_id: str, filters: dict = None):
+def get_tbs(start_date: date, end_date: date, storage_id: str, filters: dict = None):
     """
     Таблица оборотно-сальдовой ведомости (Trial Balance Sheet, TBS)
     - `storage_code`: уникальный код склада
@@ -173,58 +246,82 @@ def get_tbs(start_date: date,end_date: date, storage_id: str, filters: dict = No
     filters = filter_sorting_dto(filters["filters"])
     storage = start_service.repository.get(unique_code=storage_id)
     if storage is None:
+        start_service.observe_service.create_event(event_type.ERROR_EVENT,
+                                                   {"function": "get_tbs", "request": "/api/tbs",
+                                                    "storage_id": storage_id, "start_date": start_date,
+                                                    "end_date": end_date, "filters": filters})
+
         return ErrorResponse(f"Storage with code '{storage_id}' is null")
-    
+
     if start_date >= end_date:
+        start_service.observe_service.create_event(event_type.ERROR_EVENT,
+                                                   {"function": "get_tbs", "request": "/api/tbs",
+                                                    "storage_id": storage_id, "start_date": start_date,
+                                                    "end_date": end_date, "filters": filters})
+
         return ErrorResponse(f"End date must be later than start date")
-    
-    headers,display_data_rows = OsdTbs.calculate(storage_id, start_date, end_date, start_service,filters)
+
+    headers, display_data_rows = OsdTbs.calculate(storage_id, start_date, end_date, start_service, filters)
 
     # Теперь мы получаем заголовки и данные для отображения здесь, в эндпоинте
 
     html_table_builder = factory_entities.create(ResponseFormat.HTMLTABLE)
-    final_html = html_table_builder.build(headers=headers, data=display_data_rows) 
-    
+    final_html = html_table_builder.build(headers=headers, data=display_data_rows)
+    start_service.observe_service.create_event(event_type.INFO_EVENT,
+                                               {"function": "get_tbs", "request": "/api/tbs", "storage_id": storage_id,
+                                                "start_date": start_date, "end_date": end_date, "filters": filters})
 
     return HTMLResponse(
         final_html
     )
 
 
-@app.post("/api/save") # Используем POST, так как это изменение состояния на сервере
-def save_data_to_file(filename: str = Query(...)): # filename как Query параметр
+@app.post("/api/save")  # Используем POST, так как это изменение состояния на сервере
+def save_data_to_file(filename: str = Query(...)):  # filename как Query параметр
     """
     Сохранить все данные репозитория в файл
     - `filename`: имя выходного файла
     """
     if not filename.endswith(".json"):
+        start_service.observe_service.create_event(event_type.ERROR_EVENT,
+                                                   {"function": "save_data_to_file", "request": "/api/save",
+                                                    "filename": filename})
+
         raise HTTPException(status_code=400, detail="Filename must end with .json")
 
     # Пример безопасного пути: сохранение только в предопределенной директории 'data_exports'
     safe_path = Path("data_exports") / filename
-    safe_path.parent.mkdir(parents=True, exist_ok=True) # Создать директорию, если ее нет
+    safe_path.parent.mkdir(parents=True, exist_ok=True)  # Создать директорию, если ее нет
 
     try:
         # service_instance вместо start_service
         # (Убедитесь, что `service_instance = StartService()` определено в начале файла)
         repository_data = start_service.repository.data
         # all_keys = list(repository_data.keys())
-    
+
         # # Определяем последний ключ
         # last_key = all_keys[-1]
-        
-        
+
         # # Создаем новый словарь, исключая последний ключ
         # result_data = {key: value for key, value in repository_data.items() if key != last_key}
         result = factory_converters.convert(repository_data)
         with open(safe_path, 'w', encoding='utf-8') as file:
-            json.dump(result, file, ensure_ascii=False, indent=4) # indent=4 для красивого форматирования
-        
+            json.dump(result, file, ensure_ascii=False, indent=4)  # indent=4 для красивого форматирования
+        start_service.observe_service.create_event(event_type.INFO_EVENT,
+                                                   {"function": "save_data_to_file", "request": "/api/save",
+                                                    "filename": filename})
         return JsonResponse({"message": f"Data saved successfully to {safe_path}"})
-    
+
     except TypeError as te:
-        raise HTTPException(status_code=500, detail=f"Data serialization error: {str(te)}. Ensure all objects in repository.data are JSON-serializable.")
+        start_service.observe_service.create_event(event_type.ERROR_EVENT,
+                                                   {"function": "save_data_to_file", "request": "/api/save",
+                                                    "filename": filename})
+        raise HTTPException(status_code=500,
+                            detail=f"Data serialization error: {str(te)}. Ensure all objects in repository.data are JSON-serializable.")
     except Exception as ex:
+        start_service.observe_service.create_event(event_type.ERROR_EVENT,
+                                                   {"function": "save_data_to_file", "request": "/api/save",
+                                                    "filename": filename})
         raise HTTPException(status_code=500, detail=f"Failed to save data: {str(ex)}")
 
 
@@ -233,17 +330,24 @@ def get_directories():
     directories = {
         "measure_unit": factory_converters.convert(start_service.repository.data[Repository.measure_unit_key]),
         "nomenclatures": factory_converters.convert(start_service.repository.data[Repository.nomenclatures_key]),
-        "nomenclature_groups": factory_converters.convert(start_service.repository.data[Repository.nomenclature_group_key]),
+        "nomenclature_groups": factory_converters.convert(
+            start_service.repository.data[Repository.nomenclature_group_key]),
         "storages": factory_converters.convert(start_service.repository.data[Repository.storages_key]),  # Добавлено
-        "transactions": factory_converters.convert(start_service.repository.data[Repository.transactions_key]),  # Добавлено
+        "transactions": factory_converters.convert(start_service.repository.data[Repository.transactions_key]),
+        # Добавлено
     }
+    start_service.observe_service.create_event(event_type.INFO_EVENT,
+                                               {"function": "get_directories", "request": "/api/directories"})
     return JsonResponse(directories)
+
+
 @app.get("/api/transactions")
 def get_transactions():
     key = Repository.transactions_key
     transactions = list(start_service.repository.data[key].values())
     result = [transaction.to_dict() for transaction in transactions]
-
+    start_service.observe_service.create_event(event_type.INFO_EVENT,
+                                               {"function": "get_transactions", "request": "/api/transactions"})
     return JsonResponse(result)
 
 
